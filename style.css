@@ -26,6 +26,11 @@ body {
   color: #fff;
   height: 100svh;
   overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .grid-bg {
@@ -35,7 +40,7 @@ body {
   background-size: 40px 40px;
 }
 
-/* full-viewport stage; canvas centered, keeps 3:2 */
+/* full-viewport stage; canvas fills every screen edge-to-edge */
 .stage {
   position: relative;
   width: 100vw;
@@ -47,36 +52,33 @@ body {
 
 #game {
   display: block;
-  width: min(100vw, 150vh);
-  height: auto;
-  aspect-ratio: 3 / 2;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
+  width: 100vw;
+  height: 100svh;
   background: linear-gradient(180deg, #0a1526 0%, #0d1f3c 45%, #14406b 100%);
   touch-action: none;
 }
 
-/* top bar floats over canvas top edge */
+/* top bar: flushed to top, respects notch safe-area */
 .topbar {
   position: absolute;
-  top: calc((100svh - min(66.6667vw, 100svh)) / 2 + 12px);
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(min(100vw, 150vh) - 40px);
+  top: max(12px, env(safe-area-inset-top));
+  left: max(20px, calc(env(safe-area-inset-left) + 8px));
+  right: max(20px, calc(env(safe-area-inset-right) + 8px));
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   pointer-events: none;
+  z-index: 2;
 }
 
 .title {
   font-family: "Bebas Neue", sans-serif;
-  font-size: clamp(1.6rem, 4.5svh, 2.4rem);
-  letter-spacing: 3px;
+  font-size: clamp(1.3rem, 4svh, 2.2rem);
+  letter-spacing: 2.5px;
   line-height: 1;
   color: var(--gold);
-  text-shadow: 0 0 30px var(--glow-gold), 3px 3px 0 rgba(212, 43, 43, 0.55);
+  text-shadow: 0 0 24px var(--glow-gold), 3px 3px 0 rgba(212, 43, 43, 0.45);
+  white-space: nowrap;
 }
 
 .title span {
@@ -84,16 +86,24 @@ body {
 }
 
 .bestscore {
-  font-size: 0.72rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(11, 11, 13, 0.55);
+  border: 1px solid rgba(245, 197, 24, 0.25);
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+  font-size: 0.66rem;
   letter-spacing: 2px;
   color: var(--muted);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .bestscore b {
   color: var(--gold);
-  font-size: 1rem;
-  margin-left: 6px;
+  font-size: 1.05rem;
   font-family: "Bebas Neue", sans-serif;
   letter-spacing: 1px;
 }
@@ -106,15 +116,35 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 16px;
+  padding: 20px;
+  padding-top: max(20px, calc(env(safe-area-inset-top) + 12px));
+  padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
   background: rgba(6, 8, 12, 0.62);
   backdrop-filter: blur(3px);
   text-align: center;
-  padding: 20px;
+  z-index: 3;
 }
 
 .overlay.hidden {
   display: none;
+}
+
+.overlay-duck {
+  font-size: clamp(2.6rem, 10svh, 4.4rem);
+  line-height: 1;
+  animation: bob 1.4s ease-in-out infinite;
+  text-shadow: 0 0 30px var(--glow-gold);
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 
 .overlay-title {
@@ -123,6 +153,7 @@ body {
   letter-spacing: 4px;
   color: var(--gold);
   text-shadow: 0 0 36px var(--glow-gold), 3px 3px 0 var(--red);
+  line-height: 1;
 }
 
 .overlay-sub {
@@ -130,25 +161,33 @@ body {
   font-size: 0.8rem;
   letter-spacing: 0.5px;
   max-width: 320px;
+  line-height: 1.6;
 }
 
 .btn {
   font-family: "Bebas Neue", sans-serif;
-  font-size: 1.3rem;
-  letter-spacing: 3px;
+  font-size: 1.6rem;
+  letter-spacing: 4px;
   color: var(--dark);
   background: linear-gradient(135deg, var(--gold), var(--gold-2));
   border: none;
-  border-radius: 3px;
-  padding: 12px 42px;
+  border-radius: 999px;
+  min-width: 240px;
+  min-height: 64px;
+  padding: 16px 56px;
   cursor: pointer;
-  box-shadow: 0 10px 30px rgba(245, 197, 24, 0.22);
-  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 12px 36px rgba(245, 197, 24, 0.3), 0 0 0 4px rgba(245, 197, 24, 0.12);
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+  touch-action: manipulation;
 }
 
 .btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 40px var(--glow-gold);
+  box-shadow: 0 0 44px var(--glow-gold), 0 0 0 4px rgba(245, 197, 24, 0.18);
+}
+
+.btn:active {
+  transform: scale(0.96);
 }
 
 .hint {

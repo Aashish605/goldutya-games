@@ -9,9 +9,10 @@ const overlay = document.getElementById("overlay");
 const startBtn = document.getElementById("startBtn");
 const bestEl = document.getElementById("best");
 
-/* logical playfield, scaled to any screen */
-const W = 960;
-const H = 640;
+/* logical playfield, adapts to any aspect ratio */
+let W = 960;
+let H = 640;
+let K = 1; // H / 640, keeps physics identical on every screen
 let SCALE = 1;
 let DPR = window.devicePixelRatio || 1;
 
@@ -20,14 +21,16 @@ function fitCanvas() {
   DPR = window.devicePixelRatio || 1;
   canvas.width = Math.max(1, Math.round(rect.width * DPR));
   canvas.height = Math.max(1, Math.round(rect.height * DPR));
+  W = 960;
+  H = Math.max(1, Math.round(rect.width * (rect.height / rect.width)));
   SCALE = rect.width / W;
-}
-
-fitCanvas();
-if (typeof ResizeObserver !== "undefined") {
-  new ResizeObserver(fitCanvas).observe(canvas);
-} else {
-  window.addEventListener("resize", fitCanvas);
+  K = H / 640;
+  GRAVITY = BASE_GRAVITY * K;
+  FLAP_V = BASE_FLAP * K;
+  PIPE_SPEED = BASE_PIPE_SPEED * K;
+  PIPE_GAP = Math.max(80, Math.round(BASE_PIPE_GAP * K));
+  PIPE_MARGIN = Math.max(30, Math.round(BASE_PIPE_MARGIN * K));
+  GROUND_H = Math.max(24, Math.round(BASE_GROUND_H * K));
 }
 
 const GOLD = "#F5C518";
@@ -35,13 +38,29 @@ const RED = "#D42B2B";
 const CYAN = "#56D9FF";
 const DARK = "#0B0B0D";
 
-/* ---------- constants ---------- */
-const GRAVITY = 0.45;
-const FLAP_V = -9.4;
+/* ---------- base constants (scaled by K in fitCanvas) ---------- */
+const BASE_GRAVITY = 0.45;
+const BASE_FLAP = -9.4;
+const BASE_PIPE_GAP = 190;
+const BASE_PIPE_SPEED = 3.4;
+const BASE_PIPE_MARGIN = 80;
+const BASE_GROUND_H = 56;
 const PIPE_W = 74;
-const PIPE_GAP = 190;
-const PIPE_SPEED = 3.4;
 const PIPE_SPAWN = 1500; // ms
+
+let GRAVITY = BASE_GRAVITY;
+let FLAP_V = BASE_FLAP;
+let PIPE_GAP = BASE_PIPE_GAP;
+let PIPE_SPEED = BASE_PIPE_SPEED;
+let PIPE_MARGIN = BASE_PIPE_MARGIN;
+let GROUND_H = BASE_GROUND_H;
+
+fitCanvas();
+if (typeof ResizeObserver !== "undefined") {
+  new ResizeObserver(fitCanvas).observe(canvas);
+} else {
+  window.addEventListener("resize", fitCanvas);
+}
 
 /* ---------- state ---------- */
 let duck, pipes, score, best, state, spawnTimer, frame, particles;
@@ -112,7 +131,7 @@ bestEl.textContent = best;
 reset();
 
 function reset() {
-  duck = { x: W * 0.28, y: H / 2, w: 64, h: 52, vy: 0, rot: 0, t: 0 };
+  duck = { x: W * 0.28, y: H / 2, w: 88, h: 73, vy: 0, rot: 0, t: 0 };
   pipes = [];
   score = 0;
   spawnTimer = 0;
@@ -131,8 +150,8 @@ function drawDuck(d) {
   ctx.rotate(d.rot);
 
   if (duckImg.complete && duckImg.naturalWidth > 0) {
-    const w = 92;
-    const h = 77;
+    const w = 96;
+    const h = 80;
     ctx.drawImage(duckImg, -w / 2, -h / 2, w, h);
   } else {
     // fallback until sprite loads
@@ -155,7 +174,7 @@ function drawDuck(d) {
 
 /* ---------- pipes ---------- */
 function spawnPipe() {
-  const margin = 80;
+  const margin = PIPE_MARGIN;
   const topH = margin + Math.random() * (H - PIPE_GAP - margin * 2);
   pipes.push({
     x: W + PIPE_W,
@@ -263,10 +282,10 @@ startBtn.addEventListener("click", (e) => {
 function collides(x, y, w, h) {
   // ceiling / floor
   if (y < 0 || y + h > H) return true;
-  const rx = duck.x + 8;
-  const ry = duck.y + 6;
-  const rw = duck.w - 16;
-  const rh = duck.h - 12;
+  const rx = duck.x + 14;
+  const ry = duck.y + 10;
+  const rw = duck.w - 28;
+  const rh = duck.h - 20;
   for (const p of pipes) {
     const bottomTop = p.top + p.gap;
     if (
@@ -354,7 +373,7 @@ function drawSky() {
     10,
     W * 0.8,
     H * 0.18,
-    220
+    220 * K
   );
   g.addColorStop(0, "rgba(245,197,24,0.16)");
   g.addColorStop(1, "rgba(245,197,24,0)");
@@ -363,11 +382,11 @@ function drawSky() {
 }
 
 function drawGround() {
-  const gy = H - 56;
+  const gy = H - GROUND_H;
   ctx.fillStyle = "#0E7C45";
-  ctx.fillRect(0, gy, W, 56);
+  ctx.fillRect(0, gy, W, GROUND_H);
   ctx.fillStyle = "#0C713F";
-  ctx.fillRect(0, gy, W, 8);
+  ctx.fillRect(0, gy, W, Math.round(GROUND_H * 0.15));
   // gold trim
   ctx.fillStyle = "rgba(245,197,24,0.5)";
   ctx.fillRect(0, gy, W, 2);
@@ -377,7 +396,7 @@ function drawGround() {
   const off = (frame % dash);
   ctx.fillStyle = "rgba(255,255,255,0.18)";
   for (let x = -off; x < W; x += dash * 2) {
-    ctx.fillRect(x, gy + 30, dash * 0.7, 4);
+    ctx.fillRect(x, gy + Math.round(GROUND_H * 0.54), dash * 0.7, Math.max(2, Math.round(GROUND_H * 0.07)));
   }
 }
 
@@ -385,9 +404,9 @@ function drawGround() {
 function drawScore() {
   if (state === states.PLAY) {
     ctx.save();
-    ctx.font = '700 64px "Bebas Neue", sans-serif';
+    ctx.font = "700 " + Math.round(64 * K) + 'px "Bebas Neue", sans-serif';
     ctx.textAlign = "center";
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 6 * K;
     ctx.strokeStyle = "rgba(0,0,0,0.5)";
     ctx.strokeText(String(score), W / 2, 92);
     ctx.fillStyle = GOLD;
