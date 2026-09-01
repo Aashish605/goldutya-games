@@ -4,7 +4,6 @@
   --red: #D42B2B;
   --cyan: #56D9FF;
   --dark: #0B0B0D;
-  --panel: #121216;
   --line: rgba(255, 255, 255, 0.09);
   --muted: #A5ADBC;
   --glow-gold: rgba(245, 197, 24, 0.35);
@@ -25,11 +24,8 @@ body {
   font-family: "Space Mono", monospace;
   background: var(--dark);
   color: #fff;
-  min-height: 100vh;
-  overflow-x: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  height: 100svh;
+  overflow: hidden;
 }
 
 .grid-bg {
@@ -39,22 +35,44 @@ body {
   background-size: 40px 40px;
 }
 
+/* full-viewport stage; canvas centered, keeps 3:2 */
 .stage {
-  width: 100%;
-  max-width: 560px;
-  padding: 16px;
+  position: relative;
+  width: 100vw;
+  height: 100svh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+#game {
+  display: block;
+  width: min(100vw, 150vh);
+  height: auto;
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, #0a1526 0%, #0d1f3c 45%, #14406b 100%);
+  touch-action: none;
+}
+
+/* top bar floats over canvas top edge */
 .topbar {
+  position: absolute;
+  top: calc((100svh - min(66.6667vw, 100svh)) / 2 + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(min(100vw, 150vh) - 40px);
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 0 6px 14px;
+  pointer-events: none;
 }
 
 .title {
   font-family: "Bebas Neue", sans-serif;
-  font-size: clamp(1.6rem, 6vw, 2.4rem);
+  font-size: clamp(1.6rem, 4.5svh, 2.4rem);
   letter-spacing: 3px;
   line-height: 1;
   color: var(--gold);
@@ -80,23 +98,7 @@ body {
   letter-spacing: 1px;
 }
 
-.canvas-wrap {
-  position: relative;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
-}
-
-#game {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 3 / 2;
-  background: linear-gradient(180deg, #0a1526 0%, #0d1f3c 45%, #14406b 100%);
-  touch-action: none;
-}
-
+/* modal over whole viewport */
 .overlay {
   position: absolute;
   inset: 0;
@@ -163,23 +165,3 @@ body {
   letter-spacing: 1px;
   text-transform: uppercase;
 }
-
-.foot {
-  padding: 14px 6px 0;
-  font-size: 0.66rem;
-  color: var(--muted);
-  letter-spacing: 1.5px;
-  text-align: center;
-  text-transform: uppercase;
-}
-
-.foot a {
-  color: var(--gold);
-  text-decoration: none;
-}
-
-.foot a:hover {
-  text-decoration: underline;
-}
-
-/* in-game floating score drawn on canvas, but flash via DOM for score feed */

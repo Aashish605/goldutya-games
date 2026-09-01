@@ -3,3 +3,5 @@ node_modules
 *.log
 serve.log
 .local-test.png
+
+.vercel

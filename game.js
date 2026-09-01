@@ -9,8 +9,26 @@ const overlay = document.getElementById("overlay");
 const startBtn = document.getElementById("startBtn");
 const bestEl = document.getElementById("best");
 
-const W = canvas.width; // 960
-const H = canvas.height; // 640
+/* logical playfield, scaled to any screen */
+const W = 960;
+const H = 640;
+let SCALE = 1;
+let DPR = window.devicePixelRatio || 1;
+
+function fitCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  DPR = window.devicePixelRatio || 1;
+  canvas.width = Math.max(1, Math.round(rect.width * DPR));
+  canvas.height = Math.max(1, Math.round(rect.height * DPR));
+  SCALE = rect.width / W;
+}
+
+fitCanvas();
+if (typeof ResizeObserver !== "undefined") {
+  new ResizeObserver(fitCanvas).observe(canvas);
+} else {
+  window.addEventListener("resize", fitCanvas);
+}
 
 const GOLD = "#F5C518";
 const RED = "#D42B2B";
@@ -103,74 +121,26 @@ function reset() {
   state = states.READY;
 }
 
-/* ---------- duck drawing (canvas-drawn, original art) ---------- */
-function drawDuck(d) {
-  const cx = d.x;
-  const cy = d.y;
+/* ---------- duck drawing (SVG sprite) ---------- */
+const duckImg = new Image();
+duckImg.src = "assets/duck.svg";
 
+function drawDuck(d) {
   ctx.save();
-  ctx.translate(cx, cy);
+  ctx.translate(d.x, d.y);
   ctx.rotate(d.rot);
 
-  const bob = Math.sin(d.t * 0.2) * 3;
-
-  // tail
-  ctx.fillStyle = "#A67B1E";
-  ctx.beginPath();
-  ctx.moveTo(-30, -4 + bob);
-  ctx.quadraticCurveTo(-44, -22 + bob, -40, 2 + bob);
-  ctx.quadraticCurveTo(-44, 20 + bob, -28, 10 + bob);
-  ctx.closePath();
-  ctx.fill();
-
-  // body
-  const bodyGrad = ctx.createLinearGradient(0, -24 + bob, 0, 24 + bob);
-  bodyGrad.addColorStop(0, "#FFD95E");
-  bodyGrad.addColorStop(0.5, "#F5C518");
-  bodyGrad.addColorStop(1, "#E0A91A");
-  ctx.fillStyle = bodyGrad;
-  ctx.beginPath();
-  ctx.ellipse(0, 2 + bob, 28, 24, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // wing
-  ctx.fillStyle = "#C89B16";
-  ctx.save();
-  ctx.translate(2, 8 + bob);
-  ctx.rotate(Math.sin(d.t * 0.5) * 0.35);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 16, 12, -0.3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-
-  // head
-  ctx.fillStyle = "#FFD95E";
-  ctx.beginPath();
-  ctx.arc(26, -16 + bob, 15, 0, Math.PI * 2);
-  ctx.fill();
-
-  // eye
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.arc(31, -20 + bob, 6.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = DARK;
-  ctx.beginPath();
-  ctx.arc(32.5, -20 + bob, 3.2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.arc(33.5, -21.5 + bob, 1.3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // beak
-  ctx.fillStyle = "#E0821B";
-  ctx.beginPath();
-  ctx.moveTo(38, -12 + bob);
-  ctx.lineTo(52, -8 + bob);
-  ctx.lineTo(38, -3 + bob);
-  ctx.closePath();
-  ctx.fill();
+  if (duckImg.complete && duckImg.naturalWidth > 0) {
+    const w = 92;
+    const h = 77;
+    ctx.drawImage(duckImg, -w / 2, -h / 2, w, h);
+  } else {
+    // fallback until sprite loads
+    ctx.fillStyle = GOLD;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 30, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   ctx.restore();
 
@@ -178,7 +148,7 @@ function drawDuck(d) {
   if (d.flapTrail) {
     ctx.fillStyle = "rgba(245,197,24,0.5)";
     ctx.beginPath();
-    ctx.arc(cx - 26, cy + 24, 10, 0, Math.PI * 2);
+    ctx.arc(d.x - 26, d.y + 24, 10, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -258,7 +228,8 @@ function drawParticles() {
 
 /* ---------- input ---------- */
 function flap() {
-  if (state === states.READY) {
+  if (state === states.OVER) reset();
+  if (state === states.READY || state === states.OVER) {
     state = states.PLAY;
     overlay.classList.add("hidden");
     initAudio();
@@ -321,6 +292,7 @@ function gameOver() {
     bestEl.textContent = best;
   }
   setTimeout(() => {
+    if (state !== states.OVER) return;
     overlay.classList.remove("hidden");
     overlay.querySelector(".overlay-sub").textContent =
       score > 0
@@ -426,6 +398,7 @@ function drawScore() {
 
 /* ---------- render ---------- */
 function render() {
+  ctx.setTransform(DPR * SCALE, 0, 0, DPR * SCALE, 0, 0);
   ctx.clearRect(0, 0, W, H);
   drawSky();
   drawGround();

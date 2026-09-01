@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100">
+  <!-- tail feathers -->
+  <path d="M20 44 C8 36 6 20 16 12 C22 22 26 32 26 40 Z" fill="#C89B16"/>
+  <!-- body -->
+  <path d="M16 50 C14 32 34 20 54 20 C76 20 96 32 99 50 C101 66 84 80 62 82 C38 84 18 72 16 50 Z" fill="#F5C518"/>
+  <!-- back shading -->
+  <path d="M20 46 C30 26 56 22 78 26 C60 29 40 34 34 52 C29 55 23 52 20 46 Z" fill="#E0A91A"/>
+  <!-- belly -->
+  <ellipse cx="56" cy="64" rx="32" ry="14" fill="#FFDF59"/>
+  <!-- wing -->
+  <path d="M52 44 C54 32 66 28 76 34 C78 42 74 56 64 62 C58 60 53 54 52 44 Z" fill="#C89B16"/>
+  <path d="M58 44 C62 38 70 36 75 40" stroke="#A67B1E" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- head -->
+  <circle cx="84" cy="24" r="21" fill="#F5C518"/>
+  <!-- head highlight -->
+  <path d="M75 10 C84 7 94 12 96 19" stroke="#FFDF59" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <!-- beak -->
+  <path d="M101 18 C118 24 118 34 102 34 C99 30 99 22 101 18 Z" fill="#E0821B"/>
+  <path d="M102 27 C110 28 115 30 113 31" stroke="#B96A14" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <!-- eye -->
+  <circle cx="89" cy="20" r="6" fill="#FFFFFF"/>
+  <circle cx="91" cy="20" r="3" fill="#0B0B0D"/>
+  <circle cx="92.2" cy="18.8" r="1.2" fill="#FFFFFF"/>
+  <!-- blush -->
+  <circle cx="82" cy="31" r="3.4" fill="#FF9E9E" opacity="0.55"/>
+  <!-- tucked feet -->
+  <path d="M38 82 L36 92 M44 82 L46 92" stroke="#E0821B" stroke-width="4" stroke-linecap="round"/>
+</svg>
