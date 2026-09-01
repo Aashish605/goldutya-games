@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0B0B0D" />
+  <title>Goldutya Fly — Quack Like a Champ</title>
+  <meta name="description" content="Goldutya Fly. Flap the Goldutya duck through the pipes. Quack survival on the TON ecosystem." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A6%86%3C/text%3E%3C/svg%3E" />
+</head>
+<body class="grid-bg">
+  <div class="stage">
+    <header class="topbar">
+      <h1 class="title">GOLDUTYA <span>FLY</span></h1>
+      <div class="bestscore">BEST <b id="best">0</b></div>
+    </header>
+
+    <div class="canvas-wrap">
+      <canvas id="game" width="960" height="640"></canvas>
+
+      <div id="overlay" class="overlay">
+        <h2 class="overlay-title">GOLDUTYA FLY</h2>
+        <p class="overlay-sub">Flap the duck. Dodge the pipes. Quack forever.</p>
+        <button id="startBtn" class="btn">START</button>
+        <p class="hint">tap / click / space / up-arrow to flap</p>
+        <p class="mini">Play-to-earn on the TON ecosystem</p>
+      </div>
+    </div>
+
+    <footer class="foot">Goldutya &middot; quack quack &middot; <a href="https://t.me/goldutyacommunity" target="_blank" rel="noopener noreferrer">community</a></footer>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

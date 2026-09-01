@@ -1,0 +1,185 @@
+:root {
+  --gold: #F5C518;
+  --gold-2: #FFDF59;
+  --red: #D42B2B;
+  --cyan: #56D9FF;
+  --dark: #0B0B0D;
+  --panel: #121216;
+  --line: rgba(255, 255, 255, 0.09);
+  --muted: #A5ADBC;
+  --glow-gold: rgba(245, 197, 24, 0.35);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: "Space Mono", monospace;
+  background: var(--dark);
+  color: #fff;
+  min-height: 100vh;
+  overflow-x: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(22, 140, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 140, 255, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.stage {
+  width: 100%;
+  max-width: 560px;
+  padding: 16px;
+}
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 6px 14px;
+}
+
+.title {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(1.6rem, 6vw, 2.4rem);
+  letter-spacing: 3px;
+  line-height: 1;
+  color: var(--gold);
+  text-shadow: 0 0 30px var(--glow-gold), 3px 3px 0 rgba(212, 43, 43, 0.55);
+}
+
+.title span {
+  color: #fff;
+}
+
+.bestscore {
+  font-size: 0.72rem;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.bestscore b {
+  color: var(--gold);
+  font-size: 1rem;
+  margin-left: 6px;
+  font-family: "Bebas Neue", sans-serif;
+  letter-spacing: 1px;
+}
+
+.canvas-wrap {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.5);
+}
+
+#game {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  background: linear-gradient(180deg, #0a1526 0%, #0d1f3c 45%, #14406b 100%);
+  touch-action: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(6, 8, 12, 0.62);
+  backdrop-filter: blur(3px);
+  text-align: center;
+  padding: 20px;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay-title {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(2rem, 9vw, 3.4rem);
+  letter-spacing: 4px;
+  color: var(--gold);
+  text-shadow: 0 0 36px var(--glow-gold), 3px 3px 0 var(--red);
+}
+
+.overlay-sub {
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  max-width: 320px;
+}
+
+.btn {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.3rem;
+  letter-spacing: 3px;
+  color: var(--dark);
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
+  border: none;
+  border-radius: 3px;
+  padding: 12px 42px;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(245, 197, 24, 0.22);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 40px var(--glow-gold);
+}
+
+.hint {
+  font-size: 0.66rem;
+  color: var(--cyan);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.mini {
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.foot {
+  padding: 14px 6px 0;
+  font-size: 0.66rem;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.foot a {
+  color: var(--gold);
+  text-decoration: none;
+}
+
+.foot a:hover {
+  text-decoration: underline;
+}
+
+/* in-game floating score drawn on canvas, but flash via DOM for score feed */
