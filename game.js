@@ -82,13 +82,25 @@ function updateSkinUI() {
   const picker = document.getElementById("skinPicker");
   if (!picker) return;
   picker.innerHTML = "";
-  for (const s of SKINS) {
+  const icons = ["", "🏴‍☠️", "👑", "🌈", "👻"];
+  for (let i = 0; i < SKINS.length; i++) {
+    const s = SKINS[i];
     const unlocked = unlockedSkins.includes(s.min);
     const btn = document.createElement("button");
     btn.className = "skin-swatch" + (activeSkin === s.min ? " active" : "");
     btn.disabled = !unlocked;
     btn.title = unlocked ? s.name : "Score " + s.min + " to unlock";
-    btn.textContent = unlocked ? ["🦆", "🏴‍☠️", "👑", "🌈", "👻"][SKINS.indexOf(s)] : "🔒";
+    if (i === 0 && unlocked) {
+      const img = document.createElement("img");
+      img.src = "assets/duck-mid.png";
+      img.style.width = "32px";
+      img.style.height = "32px";
+      img.style.objectFit = "contain";
+      btn.textContent = "";
+      btn.appendChild(img);
+    } else {
+      btn.textContent = unlocked ? icons[i] : "🔒";
+    }
     if (unlocked) {
       btn.onclick = () => { activeSkin = s.min; updateSkinUI(); };
     }
@@ -460,6 +472,8 @@ function gameOver() {
   setTimeout(() => {
     if (state !== states.OVER) return;
     overlay.classList.remove("hidden");
+    const duckImgEl = overlay.querySelector(".overlay-duck-img");
+    if (duckImgEl) duckImgEl.src = "assets/duck-mid.png?" + Date.now();
     const sub = overlay.querySelector(".overlay-sub");
     let msg = score > 0 ? "Score: " + score : "Quack. Try again.";
     if (maxCombo > 1) msg += " | Max combo: " + maxCombo + "x";
