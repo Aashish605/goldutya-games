@@ -98,8 +98,16 @@ function updateSkinUI() {
   }
 }
 
-const duckImg = new Image();
-duckImg.src = "assets/duck.svg";
+const duckUp = new Image(); duckUp.src = "assets/duck-up.png";
+const duckMid = new Image(); duckMid.src = "assets/duck-mid.png";
+const duckDown = new Image(); duckDown.src = "assets/duck-down.png";
+const duckFallback = new Image(); duckFallback.src = "assets/duck.svg";
+
+function getDuckFrame() {
+  if (duck.vy < -1) return duckUp;
+  if (duck.vy > 1) return duckDown;
+  return duckMid;
+}
 
 const states = { READY: "ready", PLAY: "play", OVER: "over" };
 let duck, obstacles, coins, score, coinCount, best, state, frame, speed, particles, invuln;
@@ -190,14 +198,17 @@ function drawDuck() {
   ctx.save();
   ctx.translate(duck.x, duck.y);
   ctx.rotate(duck.rot);
-  if (duckImg.complete && duckImg.naturalWidth > 0) {
+  const frame = getDuckFrame();
+  if (frame.complete && frame.naturalWidth > 0) {
     ctx.save();
     const skinData = SKINS.find(s => s.min === activeSkin);
     if (skinData && skinData.filter) ctx.filter = skinData.filter;
-    ctx.drawImage(duckImg, -duck.w / 2, -duck.h / 2, duck.w, duck.h);
+    ctx.drawImage(frame, -duck.w / 2, -duck.h / 2, duck.w, duck.h);
     ctx.restore();
     if (activeSkin === 1) { ctx.fillStyle = "#0B0B0D"; ctx.fillRect(-duck.w * 0.1, -duck.h * 0.18, duck.w * 0.28, duck.h * 0.12); }
     if (activeSkin === 2) { ctx.fillStyle = GOLD; ctx.beginPath(); ctx.moveTo(-duck.w * 0.15, -duck.h * 0.42); ctx.lineTo(0, -duck.h * 0.62); ctx.lineTo(duck.w * 0.15, -duck.h * 0.42); ctx.closePath(); ctx.fill(); ctx.fillStyle = RED; ctx.beginPath(); ctx.arc(0, -duck.h * 0.58, 3, 0, Math.PI * 2); ctx.fill(); }
+  } else if (duckFallback.complete && duckFallback.naturalWidth > 0) {
+    ctx.drawImage(duckFallback, -duck.w / 2, -duck.h / 2, duck.w, duck.h);
   } else {
     ctx.fillStyle = GOLD;
     ctx.beginPath();
