@@ -85,7 +85,19 @@ body {
   z-index: 3;
 }
 .overlay.hidden { display: none; }
-.overlay-duck { font-size: clamp(2.6rem, 10svh, 4.4rem); line-height: 1; animation: bob 1.4s ease-in-out infinite; text-shadow: 0 0 30px var(--glow-gold); }
+.overlay-duck {
+  font-size: clamp(2.6rem, 10svh, 4.4rem);
+  line-height: 1;
+  animation: bob 1.4s ease-in-out infinite;
+  text-shadow: 0 0 30px var(--glow-gold);
+}
+
+.overlay-duck-img {
+  width: clamp(100px, 22svh, 200px);
+  height: auto;
+  animation: bob 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px var(--glow-gold));
+}
 @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 .overlay-title { font-family: "Bebas Neue", sans-serif; font-size: clamp(2rem, 9vw, 3.4rem); letter-spacing: 4px; color: var(--gold); text-shadow: 0 0 36px var(--glow-gold), 3px 3px 0 var(--red); line-height: 1; }
 .overlay-sub { color: var(--muted); font-size: 0.8rem; letter-spacing: 0.5px; max-width: 320px; line-height: 1.6; }

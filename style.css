@@ -137,6 +137,13 @@ body {
   text-shadow: 0 0 30px var(--glow-gold);
 }
 
+.overlay-duck-img {
+  width: clamp(100px, 22svh, 200px);
+  height: auto;
+  animation: bob 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 20px var(--glow-gold));
+}
+
 @keyframes bob {
   0%,
   100% {
