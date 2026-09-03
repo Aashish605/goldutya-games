@@ -113,10 +113,16 @@ const duckMid = new Image(); duckMid.src = "assets/duck-mid.png";
 const duckDown = new Image(); duckDown.src = "assets/duck-down.png";
 const duckFallback = new Image(); duckFallback.src = "assets/duck.svg";
 
+const DUCK_FRAMES = {
+  up:   { img: duckUp,   sx: 120, sy: 114, sw: 471, sh: 443 },
+  mid:  { img: duckMid,  sx: 75,  sy: 117, sw: 561, sh: 438 },
+  down: { img: duckDown, sx: 20,  sy: 20,  sw: 671, sh: 632 },
+};
+
 function getDuckFrame() {
-  if (duck.vy < -1) return duckUp;
-  if (duck.vy > 1) return duckDown;
-  return duckMid;
+  if (duck.vy < -1) return DUCK_FRAMES.up;
+  if (duck.vy > 1) return DUCK_FRAMES.down;
+  return DUCK_FRAMES.mid;
 }
 
 const states = { READY: "ready", PLAY: "play", OVER: "over" };
@@ -230,11 +236,11 @@ function drawDuck() {
   ctx.translate(duck.x, duck.y + bob);
   ctx.rotate(duck.rot);
   const frame = getDuckFrame();
-  if (frame.complete && frame.naturalWidth > 0) {
+  if (frame.img.complete && frame.img.naturalWidth > 0) {
     ctx.save();
     const skinData = SKINS.find(s => s.min === activeSkin);
     if (skinData && skinData.filter) ctx.filter = skinData.filter;
-    ctx.drawImage(frame, -duck.w / 2, -duck.h / 2, duck.w, duck.h);
+    ctx.drawImage(frame.img, frame.sx, frame.sy, frame.sw, frame.sh, -duck.w / 2, -duck.h / 2, duck.w, duck.h);
     ctx.restore();
     if (activeSkin === 1) {
       ctx.fillStyle = DARK;
