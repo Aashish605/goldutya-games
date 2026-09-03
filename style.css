@@ -204,3 +204,68 @@ body {
   letter-spacing: 1px;
   text-transform: uppercase;
 }
+
+.mute-btn {
+  background: rgba(11, 11, 13, 0.55);
+  border: 1px solid rgba(245, 197, 24, 0.25);
+  border-radius: 999px;
+  width: 44px;
+  height: 44px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  pointer-events: all;
+}
+
+.mute-btn:hover {
+  background: rgba(245, 197, 24, 0.15);
+}
+
+.share-btn {
+  min-width: 200px;
+  min-height: 52px;
+  font-size: 1.1rem;
+  background: linear-gradient(135deg, var(--cyan), #7ae0ff);
+  margin-top: 4px;
+}
+
+.skin-picker {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.skin-swatch {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  background: rgba(11, 11, 13, 0.6);
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skin-swatch:not(:disabled):hover {
+  border-color: var(--gold);
+  background: rgba(245, 197, 24, 0.12);
+}
+
+.skin-swatch.active {
+  border-color: var(--gold);
+  box-shadow: 0 0 12px var(--glow-gold);
+  background: rgba(245, 197, 24, 0.18);
+}
+
+.skin-swatch:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
