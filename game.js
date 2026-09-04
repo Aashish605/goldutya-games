@@ -37,11 +37,11 @@ function fitCanvas() {
   H = cssH;
   GROUND_H = Math.max(64, Math.round(H * 0.13));
   PIPE_W = Math.max(58, Math.min(90, Math.round(W * 0.18)));
-  PIPE_GAP = Math.max(150, Math.min(240, Math.round(H * 0.23)));
-  PIPE_SPEED = Math.max(2.8, Math.min(5.2, W * 0.008));
-  PIPE_SPACING = Math.max(180, Math.round(W * 0.58));
-  GRAVITY = H * 0.00125;
-  FLAP_V = -H * 0.021;
+  PIPE_GAP = Math.max(200, Math.min(320, Math.round(H * 0.32)));
+  PIPE_SPEED = Math.max(2.2, Math.min(3.8, W * 0.006));
+  PIPE_SPACING = Math.max(260, Math.round(W * 0.78));
+  GRAVITY = H * 0.001;
+  FLAP_V = -H * 0.022;
   DUCK_W = Math.max(48, Math.min(72, Math.min(W, H) * 0.12));
   DUCK_H = DUCK_W * 0.83;
 }
@@ -126,7 +126,7 @@ function getDuckFrame() {
 }
 
 const states = { READY: "ready", PLAY: "play", OVER: "over" };
-let duck, pipes, clouds, score, best, state, frame, particles, invuln;
+let duck, pipes, clouds, score, best, state, frame, playFrame, particles, invuln;
 let shakeX = 0, shakeY = 0, shakeDur = 0;
 let scoreScale = 1, combo = 0, maxCombo = 0, pipeCount = 0;
 let nightPhase = 0, nightDir = 0, nightTimer = 0;
@@ -211,6 +211,7 @@ function reset() {
   }
   score = 0;
   frame = 0;
+  playFrame = 0;
   particles = [];
   invuln = 40;
   shakeX = 0;
@@ -281,17 +282,19 @@ function drawDuck() {
 
 /* ---------- pipes ---------- */
 function spawnPipe() {
+  const gap = pipeCount < 3 ? PIPE_GAP + 40 : PIPE_GAP;
   const playable = H - GROUND_H;
-  const minCenter = PIPE_GAP / 2 + 24;
-  const maxCenter = playable - PIPE_GAP / 2 - 24;
+  const minCenter = gap / 2 + 24;
+  const maxCenter = playable - gap / 2 - 24;
   const center = minCenter + Math.random() * Math.max(1, maxCenter - minCenter);
-  pipes.push({ x: W + PIPE_W, gapY: center, scored: false, spawnFrame: frame });
+  pipes.push({ x: W + PIPE_W, gapY: center, scored: false, spawnFrame: frame, gapOverride: pipeCount < 3 });
 }
 
 function drawPipes() {
   for (const p of pipes) {
-    const topH = p.gapY - PIPE_GAP / 2;
-    const botY = p.gapY + PIPE_GAP / 2;
+    const gap = p.gapOverride ? PIPE_GAP + 40 : PIPE_GAP;
+    const topH = p.gapY - gap / 2;
+    const botY = p.gapY + gap / 2;
     const botH = H - GROUND_H - botY;
     const cap = Math.max(18, Math.round(H * 0.028));
     const age = frame - p.spawnFrame;
@@ -443,8 +446,8 @@ startBtn.addEventListener("click", (e) => { e.stopPropagation(); flap(); });
 
 /* ---------- collision ---------- */
 function hitbox() {
-  const hw = duck.w * 0.28;
-  const hh = duck.h * 0.28;
+  const hw = duck.w * 0.22;
+  const hh = duck.h * 0.22;
   return { l: duck.x - hw, r: duck.x + hw, t: duck.y - hh, b: duck.y + hh };
 }
 
@@ -453,8 +456,9 @@ function collides() {
   if (hb.t < 0) return true;
   if (hb.b > H - GROUND_H) return true;
   for (const p of pipes) {
-    const topH = p.gapY - PIPE_GAP / 2;
-    const botY = p.gapY + PIPE_GAP / 2;
+    const gap = p.gapOverride ? PIPE_GAP + 40 : PIPE_GAP;
+    const topH = p.gapY - gap / 2;
+    const botY = p.gapY + gap / 2;
     const inX = hb.r > p.x && hb.l < p.x + PIPE_W;
     if (inX && (hb.t < topH || hb.b > botY)) return true;
   }
@@ -555,9 +559,10 @@ function update() {
     }
   }
 
+  playFrame++;
   if (invuln > 0) invuln--;
 
-  if (frame === 50) spawnPipe();
+  if (pipes.length === 0 && playFrame >= 70) spawnPipe();
   const last = pipes[pipes.length - 1];
   if (last && last.x < W - PIPE_SPACING) spawnPipe();
 
@@ -578,10 +583,10 @@ function update() {
       else scoreBlip();
       burst(duck.x + 16, duck.y - 18, GOLD2, 7);
       if (pipeCount % 20 === 0 && nightDir === 0) { nightDir = 1; nightTimer = 90; }
-      if (pipeCount > 0 && pipeCount % 5 === 0) {
-        PIPE_GAP = Math.max(H * 0.16, PIPE_GAP - 4);
-        PIPE_SPEED = Math.min(PIPE_SPEED * 1.0 + 0.15, (W * 0.008) * 2.2);
-        PIPE_SPACING = Math.max(W * 0.4, PIPE_SPACING - 8);
+      if (pipeCount > 0 && pipeCount % 10 === 0) {
+        PIPE_GAP = Math.max(H * 0.18, PIPE_GAP - 3);
+        PIPE_SPEED = Math.min(PIPE_SPEED + 0.1, (W * 0.006) * 2);
+        PIPE_SPACING = Math.max(W * 0.5, PIPE_SPACING - 5);
       }
     }
   }
@@ -608,6 +613,13 @@ function drawScore() {
     ctx.font = "700 " + cs + 'px "Bebas Neue", sans-serif';
     ctx.fillStyle = GOLD2;
     ctx.fillText("COMBO x" + combo, W / 2, Math.max(72, H * 0.13) + size * 0.65);
+  }
+  if (state === states.PLAY && playFrame < 120) {
+    ctx.font = "700 " + Math.round(size * 0.36) + 'px "Bebas Neue", sans-serif';
+    ctx.globalAlpha = Math.max(0, 1 - playFrame / 120);
+    ctx.fillStyle = "#fff";
+    ctx.fillText("TAP TO FLAP", W / 2, H * 0.55);
+    ctx.globalAlpha = 1;
   }
   ctx.restore();
 }
