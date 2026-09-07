@@ -1,4 +1,4 @@
-/* Goldutya Jump — Enhanced Arcade Build. Viewport-pixel world. */
+/* Goldutya Jump — Chrome Dino Physics & Spacing. Viewport-pixel world. */
 
 "use strict";
 
@@ -25,9 +25,10 @@ let GROUND_H = 70;
 let GRAVITY = 0.55;
 let JUMP_V = -13;
 let SPEED0 = 4.2;
+let MAX_SPEED = 9.0;
 let OB_W = 54;
-let OB_MIN_H = 70;
-let OB_MAX_H = 160;
+let OB_MIN_H = 65;
+let OB_MAX_H = 140;
 let COIN_R = 16;
 let DUCK_W = 56;
 let DUCK_H = 47;
@@ -42,12 +43,16 @@ function fitCanvas() {
   W = cssW;
   H = cssH;
   GROUND_H = Math.max(64, Math.round(H * 0.13));
-  GRAVITY = H * 0.00135;
-  JUMP_V = -H * 0.028;
-  SPEED0 = Math.max(3.6, W * 0.0095);
-  OB_W = Math.max(44, Math.min(72, W * 0.14));
-  OB_MIN_H = Math.max(54, H * 0.09);
-  OB_MAX_H = Math.max(OB_MIN_H + 20, H * 0.2);
+
+  // Chrome Dino physics scaling
+  GRAVITY = H * 0.0014;
+  JUMP_V = -H * 0.027;
+  SPEED0 = Math.max(4.0, W * 0.010);
+  MAX_SPEED = SPEED0 * 2.16;
+
+  OB_W = Math.max(42, Math.min(68, W * 0.13));
+  OB_MIN_H = Math.max(52, H * 0.085);
+  OB_MAX_H = Math.max(OB_MIN_H + 20, H * 0.19);
   COIN_R = Math.max(12, Math.min(22, Math.min(W, H) * 0.03));
   DUCK_W = Math.max(48, Math.min(72, Math.min(W, H) * 0.12));
   DUCK_H = DUCK_W * 0.83;
@@ -346,13 +351,15 @@ function spawnObstacle() {
   let type = "normal";
   const r = Math.random();
 
-  if (isHard && r > 0.7) type = "moving";
-  else if (isMid && r > 0.55) type = "tall";
+  if (isHard && r > 0.72) type = "moving";
+  else if (isMid && r > 0.52) type = "tall";
 
-  let h = OB_MIN_H + Math.random() * (OB_MAX_H - OB_MIN_H);
-  if (type === "tall") h = OB_MAX_H * 1.12;
+  // Chrome Dino grounded cacti height scaling
+  let h = OB_MIN_H;
+  if (type === "tall") h = OB_MIN_H * 1.38;
+  else if (type === "moving") h = OB_MIN_H * 1.1;
 
-  // ALL obstacles firmly grounded
+  // ALL obstacles strictly grounded
   const yPos = H - GROUND_H - h;
 
   const o = {
@@ -365,7 +372,7 @@ function spawnObstacle() {
     scored: false,
     spawnFrame: frame,
     phase: Math.random() * Math.PI * 2,
-    gapExtra: Math.random() * (W * 0.22)
+    gapExtra: Math.random() * (OB_W * 2.8 + 60)
   };
   obstacles.push(o);
 
@@ -709,8 +716,8 @@ function update() {
     return;
   }
 
-  // Chrome Dino smooth gradual speed increment per frame
-  speed = Math.min(SPEED0 * 1.65, speed + 0.00065);
+  // Chrome Dino exact per-frame acceleration (0.001 px/frame^2)
+  speed = Math.min(MAX_SPEED, speed + 0.001);
 
   const effectiveSpeed = boostTimer > 0 ? speed * 1.4 : speed;
 
@@ -786,7 +793,7 @@ function update() {
   for (const o of obstacles) {
     o.x -= effectiveSpeed;
     if (o.type === "moving") {
-      o.y = o.baseY + Math.sin(frame * 0.05 + o.phase) * 12;
+      o.y = o.baseY + Math.sin(frame * 0.05 + o.phase) * 10;
     }
   }
   obstacles = obstacles.filter(o => o.x + o.w > -30);
@@ -808,9 +815,9 @@ function update() {
   }
   collectibles = collectibles.filter(c => c.x + c.r > -30 && !c.collected);
 
-  // Spawn new obstacles with rhythmically tuned gap
+  // Spawn new obstacles with Chrome Dino distance formula (minGap + speed scaling + random variance)
   const last = obstacles[obstacles.length - 1];
-  const minGap = Math.max(220, OB_W * 3.4) + (speed - SPEED0) * 16;
+  const minGap = Math.max(160, OB_W * 2.5) + (speed - SPEED0) * 16;
   if (!last || (W - (last.x + last.w)) >= minGap + (last.gapExtra || 0)) {
     spawnObstacle();
   }
