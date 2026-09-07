@@ -139,7 +139,7 @@ const states = { READY: "ready", PLAY: "play", PAUSED: "paused", OVER: "over" };
 let duck, obstacles, collectibles, score, coinCount, best, state, frame, speed, particles, popups, invuln;
 let shakeX = 0, shakeY = 0, shakeDur = 0, deathFlash = 0;
 let scoreScale = 1, combo = 0, maxCombo = 0;
-let shieldTimer = 0, magnetTimer = 0, boostTimer = 0;
+let shieldTimer = 0, magnetTimer = 0;
 let nightPhase = 0, nightDir = 0, nightTimer = 0;
 let muteOn = false;
 let jumpBuffer = 0;
@@ -174,7 +174,7 @@ function doubleQuack() { beep(520, 0.12, "sine", 0.18, 780); }
 function coinBlip() { beep(1200, 0.09, "sine", 0.12, 1600); }
 function shieldBlip() { beep(880, 0.15, "sine", 0.14, 1100); }
 function magnetBlip() { beep(700, 0.16, "triangle", 0.15, 1200); }
-function boostBlip() { beep(400, 0.22, "sawtooth", 0.18, 950); }
+function boostBlip() {}
 function comboBlip(c) { beep(660 + c * 60, 0.1, "sine", 0.12); }
 function thud() { beep(110, 0.28, "sine", 0.28, 40); }
 
@@ -242,7 +242,7 @@ function reset() {
   shakeX = 0; shakeY = 0; shakeDur = 0; deathFlash = 0;
   scoreScale = 1;
   combo = 0; maxCombo = 0;
-  shieldTimer = 0; magnetTimer = 0; boostTimer = 0;
+  shieldTimer = 0; magnetTimer = 0;
   nightPhase = 0; nightDir = 0; nightTimer = 0;
   jumpBuffer = 0;
   state = states.READY;
@@ -323,15 +323,7 @@ function drawDuck() {
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
-  if (boostTimer > 0) {
-    ctx.strokeStyle = GOLD2;
-    ctx.lineWidth = 3;
-    ctx.globalAlpha = 0.6 + Math.sin(duck.t * 0.4) * 0.3;
-    ctx.beginPath();
-    ctx.arc(0, 0, duck.w * 0.62, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  } else if (combo >= 3) {
+  if (combo >= 3) {
     ctx.strokeStyle = GOLD;
     ctx.lineWidth = 2;
     ctx.globalAlpha = 0.3 + Math.sin(duck.t * 0.2) * 0.2;
@@ -380,8 +372,7 @@ function spawnObstacle() {
   const itemR = Math.random();
   if (itemR > 0.2) {
     let itemType = "coin";
-    if (itemR > 0.9) itemType = "boost";
-    else if (itemR > 0.78) itemType = "magnet";
+    if (itemR > 0.85) itemType = "magnet";
 
     collectibles.push({
       x: W + OB_W + 55 + Math.random() * 80,
@@ -456,16 +447,6 @@ function drawCollectible(c) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("🧲", 0, 1);
-  } else if (c.type === "boost") {
-    ctx.fillStyle = CYAN;
-    ctx.beginPath();
-    ctx.arc(0, 0, c.r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#fff";
-    ctx.font = "700 " + Math.round(c.r * 1.2) + 'px "Space Mono", monospace';
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("⚡", 0, 1);
   }
   ctx.restore();
 }
@@ -719,7 +700,7 @@ function update() {
   // Chrome Dino exact per-frame acceleration (0.001 px/frame^2)
   speed = Math.min(MAX_SPEED, speed + 0.001);
 
-  const effectiveSpeed = boostTimer > 0 ? speed * 1.4 : speed;
+  const effectiveSpeed = speed;
 
   // Coyote timer
   if (duck.onGround) {
@@ -760,7 +741,6 @@ function update() {
   // Timers
   if (shieldTimer > 0) shieldTimer--;
   if (magnetTimer > 0) magnetTimer--;
-  if (boostTimer > 0) boostTimer--;
   if (invuln > 0) invuln--;
 
   // Running particles
@@ -771,21 +751,8 @@ function update() {
       vx: -1.5 - Math.random(),
       vy: -0.5 - Math.random(),
       life: 14 + Math.random() * 8,
-      color: boostTimer > 0 ? GOLD2 : "rgba(255,255,255,0.35)",
+      color: "rgba(255,255,255,0.35)",
       r: 2 + Math.random() * 2
-    });
-  }
-
-  // Boost trail
-  if (boostTimer > 0 && frame % 2 === 0) {
-    particles.push({
-      x: duck.x - duck.w * 0.4,
-      y: duck.y + (Math.random() - 0.5) * duck.h * 0.5,
-      vx: -effectiveSpeed * 0.8,
-      vy: (Math.random() - 0.5) * 1.5,
-      life: 20,
-      color: CYAN,
-      r: 3 + Math.random() * 3
     });
   }
 
@@ -830,16 +797,15 @@ function update() {
       combo++;
       if (combo > maxCombo) maxCombo = combo;
 
-      const multiplier = boostTimer > 0 ? 2 : 1;
       const comboBonus = 1 + Math.floor(combo / 3);
-      const pointsAdded = comboBonus * multiplier;
+      const pointsAdded = comboBonus;
       score += pointsAdded - 1;
 
       scoreScale = 1.35;
       if (combo >= 3) comboBlip(combo);
 
-      burst(duck.x + 12, duck.y - 16, boostTimer > 0 ? CYAN : GOLD, 5);
-      addPopup(duck.x, duck.y - 30, "+" + pointsAdded, boostTimer > 0 ? CYAN : GOLD, 1);
+      burst(duck.x + 12, duck.y - 16, GOLD, 5);
+      addPopup(duck.x, duck.y - 30, "+" + pointsAdded, GOLD, 1);
 
       if (score % 20 === 0 && nightDir === 0) { nightDir = 1; nightTimer = 90; }
     }
@@ -863,11 +829,6 @@ function update() {
         magnetBlip();
         burst(c.x, c.y, PURPLE, 14);
         addPopup(c.x, c.y, "MAGNET ACTIVE!", PURPLE, 1.2);
-      } else if (c.type === "boost") {
-        boostTimer = 260;
-        boostBlip();
-        burst(c.x, c.y, CYAN, 16);
-        addPopup(c.x, c.y, "SPEED BOOST 2X!", CYAN, 1.3);
       }
     }
   }
@@ -921,10 +882,10 @@ function drawGround() {
   ctx.fillRect(0, gy, W, GROUND_H);
   ctx.fillStyle = "rgb(" + (r - 4) + "," + (gv - 20) + "," + (b - 12) + ")";
   ctx.fillRect(0, gy, W, 10);
-  ctx.fillStyle = boostTimer > 0 ? CYAN : GOLD;
+  ctx.fillStyle = GOLD;
   ctx.fillRect(0, gy, W, 3);
   const dash = 46;
-  const off = (frame * (boostTimer > 0 ? speed * 1.4 : speed) * 0.55) % (dash * 2);
+  const off = (frame * speed * 0.55) % (dash * 2);
   ctx.fillStyle = "rgba(255,255,255,0.16)";
   for (let x = -off; x < W; x += dash * 2) ctx.fillRect(x, gy + GROUND_H * 0.45, dash * 0.65, 4);
 }
@@ -970,12 +931,6 @@ function drawHUD() {
     const remaining = Math.ceil(magnetTimer / 60);
     ctx.fillText("🧲 MAGNET " + remaining + "s", W / 2, hudY);
     hudY += size * 0.35;
-  }
-  if (boostTimer > 0) {
-    ctx.font = "700 " + Math.round(size * 0.35) + 'px "Bebas Neue", sans-serif';
-    ctx.fillStyle = GOLD2;
-    const remaining = Math.ceil(boostTimer / 60);
-    ctx.fillText("⚡ BOOST 2X " + remaining + "s", W / 2, hudY);
   }
 
   ctx.restore();
