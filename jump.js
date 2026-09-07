@@ -372,7 +372,7 @@ function spawnObstacle() {
     scored: false,
     spawnFrame: frame,
     phase: Math.random() * Math.PI * 2,
-    gapExtra: Math.random() * (OB_W * 2.8 + 60)
+    gapExtra: Math.random() * (OB_W * 3.5 + 140)
   };
   obstacles.push(o);
 
@@ -815,9 +815,9 @@ function update() {
   }
   collectibles = collectibles.filter(c => c.x + c.r > -30 && !c.collected);
 
-  // Spawn new obstacles with Chrome Dino distance formula (minGap + speed scaling + random variance)
+  // Spawn new obstacles with Chrome Dino distance formula (wide jump gap + speed scaling + random variance)
   const last = obstacles[obstacles.length - 1];
-  const minGap = Math.max(160, OB_W * 2.5) + (speed - SPEED0) * 16;
+  const minGap = Math.max(320, OB_W * 5.8) + (speed - SPEED0) * 22;
   if (!last || (W - (last.x + last.w)) >= minGap + (last.gapExtra || 0)) {
     spawnObstacle();
   }
