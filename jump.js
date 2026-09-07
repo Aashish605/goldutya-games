@@ -44,10 +44,10 @@ function fitCanvas() {
   GROUND_H = Math.max(64, Math.round(H * 0.13));
   GRAVITY = H * 0.00135;
   JUMP_V = -H * 0.028;
-  SPEED0 = Math.max(3.4, W * 0.011);
+  SPEED0 = Math.max(3.6, W * 0.0095);
   OB_W = Math.max(44, Math.min(72, W * 0.14));
-  OB_MIN_H = Math.max(56, H * 0.1);
-  OB_MAX_H = Math.max(OB_MIN_H + 20, H * 0.22);
+  OB_MIN_H = Math.max(54, H * 0.09);
+  OB_MAX_H = Math.max(OB_MIN_H + 20, H * 0.2);
   COIN_R = Math.max(12, Math.min(22, Math.min(W, H) * 0.03));
   DUCK_W = Math.max(48, Math.min(72, Math.min(W, H) * 0.12));
   DUCK_H = DUCK_W * 0.83;
@@ -340,30 +340,20 @@ function drawDuck() {
 
 /* ---------- obstacles & collectibles ---------- */
 function spawnObstacle() {
-  const currentSpeedMult = boostTimer > 0 ? 1.4 : 1;
-  const isHard = score > 30;
-  const isMid = score > 12;
+  const isHard = score > 25;
+  const isMid = score > 10;
 
   let type = "normal";
   const r = Math.random();
 
-  if (isHard && r > 0.72) type = "moving";
+  if (isHard && r > 0.7) type = "moving";
   else if (isMid && r > 0.55) type = "tall";
-  else if (r > 0.8) type = "floating";
 
   let h = OB_MIN_H + Math.random() * (OB_MAX_H - OB_MIN_H);
-  if (type === "tall") h = OB_MAX_H * 1.15;
-  if (type === "floating") h = OB_MIN_H * 0.85;
+  if (type === "tall") h = OB_MAX_H * 1.12;
 
-  let yPos = H - GROUND_H - h;
-  let fromTop = false;
-
-  if (type === "floating") {
-    yPos = H - GROUND_H - DUCK_H * 2.2 - Math.random() * (H * 0.15);
-  } else if (Math.random() > 0.7 && type === "normal") {
-    fromTop = true;
-    yPos = 0;
-  }
+  // ALL obstacles firmly grounded
+  const yPos = H - GROUND_H - h;
 
   const o = {
     x: W + OB_W,
@@ -371,24 +361,24 @@ function spawnObstacle() {
     baseY: yPos,
     w: OB_W,
     h,
-    fromTop,
     type,
     scored: false,
     spawnFrame: frame,
-    phase: Math.random() * Math.PI * 2
+    phase: Math.random() * Math.PI * 2,
+    gapExtra: Math.random() * (W * 0.22)
   };
   obstacles.push(o);
 
-  // Spawn Collectibles
+  // Spawn Collectibles in reachable arc above ground
   const itemR = Math.random();
-  if (itemR > 0.25) {
+  if (itemR > 0.2) {
     let itemType = "coin";
     if (itemR > 0.9) itemType = "boost";
     else if (itemR > 0.78) itemType = "magnet";
 
     collectibles.push({
-      x: W + OB_W + 65 + Math.random() * 90,
-      y: H - GROUND_H - DUCK_H - 30 - Math.random() * (H * 0.24),
+      x: W + OB_W + 55 + Math.random() * 80,
+      y: H - GROUND_H - DUCK_H - 25 - Math.random() * (H * 0.22),
       r: COIN_R,
       type: itemType,
       collected: false,
@@ -398,11 +388,6 @@ function spawnObstacle() {
 }
 
 function drawObstacle(o) {
-  const age = frame - o.spawnFrame;
-  if (age < 30) {
-    ctx.fillStyle = "rgba(245,197,24," + (0.25 * (1 - age / 30)) + ")";
-    ctx.fillRect(o.x - 10, 0, o.w + 20, H);
-  }
   const n = nightPhase;
   const r = Math.round(11 + n * 18);
   const g = Math.round(107 + n * 60);
@@ -423,18 +408,19 @@ function drawObstacle(o) {
     grad.addColorStop(1, "rgb(" + (r - 5) + "," + (g - 20) + "," + (b - 10) + ")");
   }
 
+  // Draw crate body fully flush with ground line (extended 6px below ground to avoid gaps)
+  const renderH = (H - GROUND_H - o.y) + 6;
   ctx.fillStyle = grad;
-  ctx.fillRect(o.x, o.y, o.w, o.h);
+  ctx.fillRect(o.x, o.y, o.w, renderH);
 
-  // Cap / Trim
+  // Top Cap
   ctx.fillStyle = o.type === "moving" ? "#7f1d1d" : "rgb(" + (r - 10) + "," + (g - 30) + "," + (b - 15) + ")";
-  const cap = 16;
-  if (o.fromTop) ctx.fillRect(o.x - 5, o.y + o.h - cap, o.w + 10, cap);
-  else ctx.fillRect(o.x - 5, o.y, o.w + 10, cap);
+  const cap = 14;
+  ctx.fillRect(o.x - 4, o.y, o.w + 8, cap);
 
-  // Stripe line
+  // Stripe line accent
   ctx.fillStyle = o.type === "moving" ? GOLD : (n > 0.3 ? "rgba(245,197,24,0.7)" : "rgba(245,197,24,0.55)");
-  ctx.fillRect(o.x, o.y, 4, o.h);
+  ctx.fillRect(o.x + 2, o.y + cap, 4, renderH - cap);
 }
 
 function drawCollectible(c) {
@@ -723,7 +709,9 @@ function update() {
     return;
   }
 
-  // Active PLAY update
+  // Chrome Dino smooth gradual speed increment per frame
+  speed = Math.min(SPEED0 * 1.65, speed + 0.00065);
+
   const effectiveSpeed = boostTimer > 0 ? speed * 1.4 : speed;
 
   // Coyote timer
@@ -766,12 +754,6 @@ function update() {
   if (shieldTimer > 0) shieldTimer--;
   if (magnetTimer > 0) magnetTimer--;
   if (boostTimer > 0) boostTimer--;
-
-  // Speed ramp (smooth lerp)
-  if (frame % 220 === 0) {
-    const targetSpeed = Math.min(SPEED0 * 2.4, SPEED0 + (score * 0.08));
-    speed += (targetSpeed - speed) * 0.3;
-  }
   if (invuln > 0) invuln--;
 
   // Running particles
@@ -804,7 +786,7 @@ function update() {
   for (const o of obstacles) {
     o.x -= effectiveSpeed;
     if (o.type === "moving") {
-      o.y = o.baseY + Math.sin(frame * 0.06 + o.phase) * (H * 0.08);
+      o.y = o.baseY + Math.sin(frame * 0.05 + o.phase) * 12;
     }
   }
   obstacles = obstacles.filter(o => o.x + o.w > -30);
@@ -826,10 +808,12 @@ function update() {
   }
   collectibles = collectibles.filter(c => c.x + c.r > -30 && !c.collected);
 
-  // Spawn new obstacles
+  // Spawn new obstacles with rhythmically tuned gap
   const last = obstacles[obstacles.length - 1];
-  const minGap = Math.max(W * 0.48, 190);
-  if (!last || last.x < W - minGap) spawnObstacle();
+  const minGap = Math.max(220, OB_W * 3.4) + (speed - SPEED0) * 16;
+  if (!last || (W - (last.x + last.w)) >= minGap + (last.gapExtra || 0)) {
+    spawnObstacle();
+  }
 
   // Scoring
   for (const o of obstacles) {
