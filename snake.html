@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GOLDUTYA SNAKE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="snake.css">
+</head>
+<body class="grid-bg">
+<div class="stage">
+<canvas id="game"></canvas>
+<header class="topbar">
+<button class="mute-btn" id="muteBtn" aria-label="Toggle sound">&#128266;</button>
+<h1 class="title">GOLDUTYA SNAKE</h1>
+<span class="bestscore" id="bestScore">BEST: 0</span>
+</header>
+<div class="overlay" id="overlay">
+<img class="overlay-duck-img" id="overlayDuck" src="assets/duck-mid.png" alt="Duck">
+<h2 class="overlay-title" id="overlayTitle">GOLDUTYA SNAKE</h2>
+<p class="overlay-sub" id="overlaySub">Swipe, arrow keys or tap quadrants to move the duck!</p>
+<button class="btn" id="startBtn">START</button>
+<button class="btn share-btn" id="shareBtn" style="display:none;">SHARE</button>
+<div class="skin-picker" id="skinPicker">
+<div class="skin-swatch active" data-skin="default" title="Classic Duck"></div>
+<div class="skin-swatch" data-skin="neon" title="Neon Duck"></div>
+<div class="skin-swatch" data-skin="retro" title="Retro Duck"></div>
+</div>
+<p class="hint" id="hint">Duck is hungry. Collect gold &amp; avoid crashing!</p>
+<div class="mini" id="mini">
+<a href="fly.html">Fly</a>
+<a href="jump.html">Jump</a>
+</div>
+<a class="hub-link" href="hub.html">&#8592; Hub</a>
+</div>
+</div>
+<script src="snake.js"></script>
+</body>
+</html>

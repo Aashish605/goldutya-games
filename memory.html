@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>GOLDUTYA MEMORY</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="memory.css">
+</head>
+<body class="grid-bg">
+  <div class="memory-container">
+    <header class="topbar">
+      <button class="mute-btn" id="muteBtn" aria-label="Toggle sound">🔊</button>
+      <h1 class="title">GOLDUTYA MEMORY</h1>
+      <div class="bestscore" id="bestScore">BEST: --</div>
+    </header>
+
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-num" id="timer">00:00</span>
+        <span class="stat-label">TIME</span>
+      </div>
+      <div class="difficulty-btns" id="diffBtns">
+        <button class="difficulty-btn active" data-diff="easy">EASY</button>
+        <button class="difficulty-btn" data-diff="medium">MED</button>
+        <button class="difficulty-btn" data-diff="hard">HARD</button>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="moves">0</span>
+        <span class="stat-label">MOVES</span>
+      </div>
+    </div>
+
+    <div class="card-grid grid-easy" id="cardGrid"></div>
+
+    <div class="overlay" id="overlay">
+      <div class="overlay-content">
+        <img class="overlay-duck-img" src="assets/duck-mid.png" alt="Duck">
+        <h2 class="overlay-title" id="overlayTitle">GOLDUTYA MEMORY</h2>
+        <p class="overlay-sub" id="overlaySub">Match pairs to win!</p>
+        <button class="btn" id="startBtn">START</button>
+        <button class="share-btn" id="shareBtn" style="display:none;">SHARE SCORE</button>
+        <div class="skin-picker" id="skinPicker">
+          <span class="skin-label">SKIN</span>
+          <button class="skin-opt active" data-skin="default">🦆</button>
+          <button class="skin-opt" data-skin="gold">🪙</button>
+          <button class="skin-opt" data-skin="crown">👑</button>
+        </div>
+        <p class="hint">Flip cards · Match pairs · Beat your best</p>
+        <div class="mini">
+          <a href="fly.html">FLY</a>
+          <a href="jump.html">JUMP</a>
+          <a href="hub.html">HUB</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="memory.js"></script>
+</body>
+</html>

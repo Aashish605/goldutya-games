@@ -1,0 +1,206 @@
+:root {
+  --gold: #F5C518;
+  --gold-2: #FFDF59;
+  --red: #D42B2B;
+  --cyan: #56D9FF;
+  --dark: #0B0B0D;
+  --line: rgba(255, 255, 255, 0.09);
+  --muted: #A5ADBC;
+  --glow-gold: rgba(245, 197, 24, 0.35);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: "Space Mono", monospace;
+  background: var(--dark);
+  color: #fff;
+  min-height: 100svh;
+  overflow-x: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(22, 140, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(22, 140, 255, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.hub {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px;
+  padding-top: max(20px, env(safe-area-inset-top));
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* header */
+.hub-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.hub-logo {
+  width: clamp(80px, 18svh, 140px);
+  height: auto;
+  filter: drop-shadow(0 0 24px var(--glow-gold));
+  animation: float 2.5s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.hub-title {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(2rem, 7vw, 3.6rem);
+  letter-spacing: 4px;
+  line-height: 1;
+  color: var(--gold);
+  text-shadow: 0 0 30px var(--glow-gold), 3px 3px 0 rgba(212, 43, 43, 0.45);
+  margin-top: 12px;
+}
+
+.hub-title span { color: #fff; }
+
+.hub-sub {
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 6px;
+}
+
+/* grid */
+.hub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  flex: 1;
+  align-content: start;
+}
+
+@media (min-width: 640px) {
+  .hub-grid { grid-template-columns: repeat(3, 1fr); gap: 18px; }
+}
+
+/* card */
+.game-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: linear-gradient(155deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+  overflow: hidden;
+  text-decoration: none;
+  color: #fff;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.game-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(245, 197, 24, 0.5);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4), 0 0 24px rgba(245, 197, 24, 0.1);
+}
+
+.game-card:active {
+  transform: translateY(-2px) scale(0.98);
+}
+
+.card-icon {
+  aspect-ratio: 1;
+  background: #0B0B0D;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.card-icon img {
+  width: 60%;
+  height: 60%;
+  object-fit: contain;
+}
+
+.card-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.card-name {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 1.15rem;
+  letter-spacing: 1.5px;
+  line-height: 1.1;
+}
+
+.card-cat {
+  font-size: 0.6rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--cyan);
+  opacity: 0.8;
+}
+
+.card-best {
+  font-size: 0.6rem;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-top: auto;
+}
+
+.card-best b {
+  color: var(--gold);
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 0.85rem;
+  margin-left: 4px;
+}
+
+.card-play {
+  display: inline-block;
+  margin-top: 6px;
+  font-family: "Bebas Neue", sans-serif;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  color: var(--dark);
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
+  border: none;
+  border-radius: 999px;
+  padding: 8px 20px;
+  text-align: center;
+  text-decoration: none;
+  pointer-events: none;
+}
+
+/* footer */
+.hub-footer {
+  text-align: center;
+  padding: 24px 0 0;
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.hub-footer a {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--gold);
+  text-decoration: none;
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+}
+
+.hub-footer a:hover { text-decoration: underline; }

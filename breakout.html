@@ -4,12 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0B0B0D" />
-  <title>Goldutya Jump — Dodge the Gold Rush</title>
-  <meta name="description" content="Goldutya Jump. Duck runs. Tap to jump. Dodge crates. Collect gold. TON ecosystem." />
+  <title>Goldutya Breakout — Smash the Gold Bricks</title>
+  <meta name="description" content="Goldutya Breakout. Paddle, ball, gold bricks. Smash them all. TON ecosystem." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="jump.css" />
+  <link rel="stylesheet" href="breakout.css" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A6%86%3C/text%3E%3C/svg%3E" />
 </head>
 <body class="grid-bg">
@@ -18,24 +18,23 @@
 
     <header class="topbar">
       <button id="muteBtn" class="mute-btn" aria-label="Toggle sound">🔊</button>
-      <button id="pauseBtn" class="mute-btn" aria-label="Pause game" style="margin-left: 6px;">⏸</button>
-      <h1 class="title">GOLDUTYA <span>JUMP</span></h1>
+      <h1 class="title">GOLDUTYA <span>BREAKOUT</span></h1>
       <div class="bestscore">BEST <b id="best">0</b></div>
     </header>
 
     <div id="overlay" class="overlay">
       <img class="overlay-duck-img" src="assets/duck-mid.png" alt="" aria-hidden="true" />
-      <h2 class="overlay-title">GOLDUTYA JUMP</h2>
-      <p class="overlay-sub">Duck runs. Tap to jump. Dodge crates. Collect gold.</p>
+      <h2 class="overlay-title">GOLDUTYA BREAKOUT</h2>
+      <p class="overlay-sub">Paddle the ball. Smash the gold bricks. Clear every level.</p>
       <button id="startBtn" class="btn">START</button>
       <button id="shareBtn" class="btn share-btn" style="display:none">SHARE SCORE</button>
       <div id="skinPicker" class="skin-picker"></div>
-      <p class="hint">tap / click / space / up-arrow to jump</p>
+      <p class="hint">tap / click / drag to move paddle · arrow keys also work</p>
       <p class="mini">Play-to-earn on the TON ecosystem</p>
       <p class="hint" style="margin-top:6px"><a href="hub.html" style="color:var(--gold);text-decoration:underline">🎮 ALL GAMES</a> &nbsp;·&nbsp; <a href="fly.html" style="color:var(--cyan);text-decoration:underline">▶ FLY</a></p>
     </div>
   </div>
 
-  <script src="jump.js"></script>
+  <script src="breakout.js"></script>
 </body>
 </html>
