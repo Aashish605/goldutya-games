@@ -126,7 +126,13 @@ let timeLeft = 60, lastTimeTick = 0;
 let speedMult = 1;
 let nightPhase = 0, nightDir = 0, nightTimer = 0;
 let muteOn = false;
-let duckBob = 0;
+let duckBob = 0, duckVy = 0;
+let deathCause = "timeout";
+let bombWarns = [];
+let paused = false;
+const MILESTONES = [100, 250, 500, 1000, 2500, 5000];
+let lastMilestone = 0;
+const isTouch = ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0;
 
 best = Number(localStorage.getItem("goldutya-clicker-best") || 0);
 if (bestEl) bestEl.textContent = best;
@@ -236,12 +242,16 @@ function reset() {
   shieldTimer = 0;
   itemsCollected = 0;
   bombTimer = 0;
-  shieldTimerSpawn = 15 * 60 + Math.random() * 5 * 60;
+  bombWarns = [];
+  shieldTimerSpawn = 10 * 60 + Math.random() * 3 * 60;
   timeLeft = 60;
   lastTimeTick = 0;
   speedMult = 1;
   nightPhase = 0; nightDir = 0; nightTimer = 0;
   duckBob = 0;
+  duckVy = 0;
+  deathCause = "timeout";
+  lastMilestone = 0;
   initClouds();
   state = states.READY;
 }
@@ -264,18 +274,21 @@ function spawnCoin() {
   });
 }
 
-function spawnBomb() {
+function spawnBombAt(x) {
   const speed = BASE_SPEED * speedMult;
-  const drift = (Math.random() - 0.5) * 0.6;
   items.push({
     type: "bomb",
-    x: BOMB_R + Math.random() * (W - BOMB_R * 2),
+    x: x,
     y: -BOMB_R * 2,
     r: BOMB_R,
     vy: speed * 0.9 + Math.random() * 0.6,
-    vx: drift,
+    vx: (Math.random() - 0.5) * 0.6,
     alive: true,
   });
+}
+
+function scheduleBomb() {
+  bombWarns.push({ x: BOMB_R + Math.random() * (W - BOMB_R * 2), t: 30 });
 }
 
 function spawnShield() {
@@ -370,6 +383,38 @@ function drawBomb(b) {
   ctx.restore();
 }
 
+function drawBombWarns() {
+  for (var wi = 0; wi < bombWarns.length; wi++) {
+    var w = bombWarns[wi];
+    var prog = (30 - w.t) / 30;
+    ctx.save();
+    ctx.globalAlpha = 0.5 + Math.sin(frame * 0.4) * 0.3;
+    ctx.fillStyle = RED;
+    ctx.beginPath();
+    ctx.arc(w.x, 14, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(212,43,43," + 0.6 * (1 - prog) + ")";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 7]);
+    ctx.beginPath();
+    ctx.moveTo(w.x, 22);
+    ctx.lineTo(w.x, 22 + prog * H * 0.1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+}
+
+function drawUrgency() {
+  if (state !== states.PLAY || timeLeft > 10) return;
+  var pulse = 0.14 + Math.sin(frame * 0.3) * 0.1;
+  var vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.72);
+  vg.addColorStop(0, "rgba(212,43,43,0)");
+  vg.addColorStop(1, "rgba(212,43,43," + pulse + ")");
+  ctx.fillStyle = vg;
+  ctx.fillRect(0, 0, W, H);
+}
+
 function drawShieldStar(s) {
   ctx.save();
   ctx.translate(s.x, s.y);
@@ -403,7 +448,8 @@ function drawShieldStar(s) {
 
 /* ---------- duck ---------- */
 function getDuckFrame() {
-  if (shieldTimer > 0) return DUCK_FRAMES.mid;
+  if (duckVy < -1) return DUCK_FRAMES.up;
+  if (duckVy > 1) return DUCK_FRAMES.down;
   return DUCK_FRAMES.mid;
 }
 
@@ -486,7 +532,7 @@ function handleTap(x, y) {
     const dx = x - item.x;
     const dy = y - item.y;
     const dist = Math.hypot(dx, dy);
-    const tapR = item.r + 24;
+    const tapR = item.r + (isTouch ? 32 : 24);
     if (dist < tapR && dist < hitDist) {
       hitItem = item;
       hitDist = dist;
@@ -505,12 +551,14 @@ function handleTap(x, y) {
     score += pts;
     itemsCollected++;
     scoreScale = 1.4;
+    duckVy = -7;
     coinBlip();
     burst(hitItem.x, hitItem.y, GOLD, 12);
     addPopup(hitItem.x, hitItem.y, "+" + pts, GOLD2, 1.1);
     if (combo >= 3) comboBlip(combo);
     checkNight();
     checkSpeedRamp();
+    checkMilestone(score);
   } else if (hitItem.type === "bomb") {
     if (shieldTimer > 0) {
       shieldTimer = 0;
@@ -519,7 +567,7 @@ function handleTap(x, y) {
       shieldBlip();
       shakeDur = 8;
     } else {
-      gameOver();
+      gameOver("bomb");
       return;
     }
   } else if (hitItem.type === "shield") {
@@ -548,6 +596,17 @@ function checkSpeedRamp() {
   const elapsed = 60 - timeLeft;
   const rampIndex = Math.floor(elapsed / 10);
   speedMult = 1 + rampIndex * 0.25;
+}
+
+function checkMilestone(sc) {
+  if (MILESTONES[lastMilestone] !== undefined && sc >= MILESTONES[lastMilestone]) {
+    const ms = MILESTONES[lastMilestone];
+    lastMilestone++;
+    burst(W / 2, H * 0.32, GOLD, 18);
+    addPopup(W / 2, H * 0.34, ms + "!", GOLD, 1.3);
+    beep(660 + lastMilestone * 40, 0.25, "sine", 0.18, 990 + lastMilestone * 40);
+    scoreScale = 1.7;
+  }
 }
 
 /* ---------- input ---------- */
@@ -598,9 +657,10 @@ if (startBtn) startBtn.addEventListener("click", function(e) {
 });
 
 /* ---------- game over ---------- */
-function gameOver() {
+function gameOver(cause) {
   if (state !== states.PLAY) return;
   state = states.OVER;
+  deathCause = cause || "timeout";
   thud();
   shakeDur = 24;
   deathFlash = 12;
@@ -611,6 +671,10 @@ function gameOver() {
     best = score;
     localStorage.setItem("goldutya-clicker-best", String(best));
     if (bestEl) bestEl.textContent = best;
+    burst(W / 2, H * 0.3, GOLD, 20);
+    addPopup(W / 2, H * 0.32, "NEW BEST!", GOLD, 1.4);
+    beep(440, 0.3, "sine", 0.2, 880);
+    scoreScale = 1.8;
   }
   setTimeout(function() {
     if (state !== states.OVER) return;
@@ -618,7 +682,9 @@ function gameOver() {
     const duckImgEl = overlay.querySelector(".overlay-duck-img");
     if (duckImgEl) duckImgEl.src = "assets/duck-mid.png?" + Date.now();
     const sub = overlay.querySelector(".overlay-sub");
-    let msg = score > 0 ? "Score: " + score + " (" + (60 - timeLeft) + "s)" : "Time's up! Try again.";
+    let msg = score > 0
+      ? (deathCause === "bomb" ? "BOOM! Score: " + score : "Time's up! Score: " + score)
+      : "Time's up! Try again.";
     if (maxCombo > 1) msg += " | Max combo: " + maxCombo + "x";
     if (sub) sub.textContent = msg;
     const btn = overlay.querySelector(".btn");
@@ -716,7 +782,7 @@ function update() {
   if (deathFlash > 0) deathFlash--;
   if (scoreScale > 1.01) scoreScale += (1 - scoreScale) * 0.12;
 
-  duckBob = Math.sin(frame * 0.08) * 3;
+  duckBob = Math.sin(frame * 0.08) * 3 + duckVy * 1.4;
 
   for (var ci = 0; ci < clouds.length; ci++) {
     var c = clouds[ci];
@@ -755,23 +821,33 @@ function update() {
 
   if (invuln > 0) invuln--;
   if (shieldTimer > 0) shieldTimer--;
+  if (duckVy !== 0) duckVy *= 0.9;
 
   /* spawn coins */
   var spawnInterval = Math.max(15, Math.round(BASE_SPAWN / speedMult));
+  if (timeLeft <= 10) spawnInterval = Math.max(10, spawnInterval - 4);
   if (frame % spawnInterval === 0) spawnCoin();
 
   /* spawn bombs */
   bombTimer--;
   if (bombTimer <= 0) {
-    spawnBomb();
+    scheduleBomb();
     bombTimer = Math.round((180 + Math.random() * 120) / speedMult);
+  }
+
+  for (var wi = bombWarns.length - 1; wi >= 0; wi--) {
+    bombWarns[wi].t--;
+    if (bombWarns[wi].t <= 0) {
+      spawnBombAt(bombWarns[wi].x);
+      bombWarns.splice(wi, 1);
+    }
   }
 
   /* spawn shields */
   shieldTimerSpawn--;
   if (shieldTimerSpawn <= 0) {
     spawnShield();
-    shieldTimerSpawn = Math.round(900 + Math.random() * 300);
+    shieldTimerSpawn = Math.round(700 + Math.random() * 200);
   }
 
   /* update items */
@@ -834,6 +910,13 @@ function drawHUD() {
     ctx.fillText("COMBO x" + getComboMult(), W / 2, Math.max(90, H * 0.16) + size * 0.6);
   }
 
+  if (speedMult > 1) {
+    var us = Math.round(size * 0.34);
+    ctx.font = "700 " + us + 'px "Bebas Neue", sans-serif';
+    ctx.fillStyle = CYAN;
+    ctx.fillText("SPEED x" + Math.round(speedMult * 100) / 100, W / 2, Math.max(90, H * 0.16) + size * 0.74);
+  }
+
   if (shieldTimer > 0) {
     var ss = Math.round(size * 0.35);
     ctx.font = "700 " + ss + 'px "Bebas Neue", sans-serif';
@@ -859,6 +942,7 @@ function render() {
   ctx.clearRect(-10, -10, W + 20, H + 20);
 
   drawSky();
+  drawBombWarns();
 
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
@@ -871,15 +955,22 @@ function render() {
   drawParticles();
   drawDuck();
   drawPopups();
+  drawUrgency();
   drawTimer();
   drawHUD();
 
   ctx.restore();
 }
 
+document.addEventListener("visibilitychange", function () {
+  paused = document.hidden;
+});
+
 function loop() {
-  update();
-  render();
+  if (!paused) {
+    update();
+    render();
+  }
   requestAnimationFrame(loop);
 }
 

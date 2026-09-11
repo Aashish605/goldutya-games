@@ -3,11 +3,11 @@
 
   /* ── CONSTANTS ── */
   const STORAGE_KEY = "goldutya-memory-best";
-  const EMOJIS = ["🦆","🪙","👑","⭐","💣","🛡️","❤️","⚡","🌙","🎯","🎪","🎨","🎵","💎","🔮","🦊","🎪","🌟"];
+  const EMOJIS = ["🦆","🪙","👑","⭐","💣","🛡️","❤️","⚡","🌙","🎯","🍀","🎨","🎵","💎","🔮","🦊","🎪","🌟"];
   const DIFFICULTIES = {
     easy:   { cols: 4, rows: 3, pairs: 6 },
     medium: { cols: 4, rows: 4, pairs: 8 },
-    hard:   { cols: 6, rows: 6, pairs: 18 }
+    hard:   { cols: 6, rows: 5, pairs: 15 }
   };
 
   /* ── STATE ── */
@@ -15,13 +15,12 @@
   let cards = [];
   let flippedCards = [];
   let matchedPairs = 0;
-  let moves = 0;
-  let timerInterval = null;
-  let elapsed = 0;
+let moves = 0;
+let elapsed = 0;
   let gameStarted = false;
   let gameLocked = false;
-  let muted = false;
-  let currentSkin = "default";
+let muted = localStorage.getItem("goldutya-memory-mute") === "1";
+let currentSkin = "default";
   let audioCtx = null;
 
   /* ── DOM ── */
@@ -126,6 +125,48 @@
     } catch { return null; }
   }
 
+  /* ── LIVE SCORE ── */
+  const liveScoreEl = $("#liveScore");
+  function calcScore() {
+    const { pairs } = DIFFICULTIES[currentDiff];
+    const timeBonus = Math.max(0, 300 - elapsed);
+    return pairs * 100 - moves * 5 + timeBonus;
+  }
+  function updateLiveScore() {
+    if (!gameStarted || !liveScoreEl) return;
+    liveScoreEl.textContent = calcScore();
+  }
+
+  /* ── STAR RATING ── */
+  function getStars(mvs, diff) {
+    const { pairs } = DIFFICULTIES[diff];
+    const optimal = pairs;
+    if (mvs <= optimal) return 3;
+    if (mvs <= optimal * 1.5) return 2;
+    return 1;
+  }
+
+  function renderStars(n) {
+    let s = "";
+    for (let i = 0; i < 3; i++) s += i < n ? "★" : "☆";
+    return s;
+  }
+
+  /* ── CONFETTI ── */
+  function spawnConfetti() {
+    const colors = ["#F5C518", "#FFDF59", "#56D9FF", "#D42B2B", "#fff"];
+    for (let i = 0; i < 30; i++) {
+      const el = document.createElement("div");
+      el.className = "confetti-piece";
+      el.style.left = Math.random() * 100 + "%";
+      el.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      el.style.animationDuration = (1.5 + Math.random() * 2) + "s";
+      el.style.animationDelay = (Math.random() * 0.6) + "s";
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
+  }
+
   /* ── GRID ── */
   function buildGrid() {
     const { cols, rows, pairs } = DIFFICULTIES[currentDiff];
@@ -193,6 +234,7 @@
       matchedPairs++;
       flippedCards = [];
       gameLocked = false;
+      updateLiveScore();
 
       const { pairs } = DIFFICULTIES[currentDiff];
       if (matchedPairs === pairs) {
@@ -216,34 +258,64 @@
   function handleWin() {
     stopTimer();
     sfxWin();
-    const { pairs } = DIFFICULTIES[currentDiff];
-    const timeBonus = Math.max(0, 300 - elapsed);
-    const score = pairs * 100 - moves * 5 + timeBonus;
+    const score = calcScore();
+    const stars = getStars(moves, currentDiff);
+    const prev = loadBestFor(currentDiff);
+    const isNewBest = !prev || score > prev.score || (score === prev.score && moves < prev.moves);
 
     saveBest(currentDiff, score, moves, elapsed);
 
-    overlayTitle.textContent = "YOU WIN!";
-    overlaySub.textContent = `${score}pts · ${moves} moves · ${fmtTime(elapsed)}`;
+    overlayTitle.textContent = isNewBest ? "NEW BEST!" : "YOU WIN!";
+    overlaySub.innerHTML = `<span class="stars">${renderStars(stars)}</span><br>${score}pts · ${moves} moves · ${fmtTime(elapsed)}`;
     startBtn.textContent = "PLAY AGAIN";
     shareBtn.style.display = "inline-block";
     overlay.classList.add("visible");
     showBest();
+
+    spawnConfetti();
+    if (isNewBest) {
+      playTone(440, 0.3, "sine", 0.2);
+      setTimeout(() => playTone(880, 0.3, "sine", 0.2), 150);
+    }
   }
 
   /* ── TIMER ── */
+  let timerStartMs = 0;
+  let timerPaused = false;
+  let timerAccumulated = 0;
+
   function startTimer() {
     elapsed = 0;
+    timerAccumulated = 0;
+    timerStartMs = Date.now();
+    timerPaused = false;
     timerEl.textContent = "00:00";
-    timerInterval = setInterval(() => {
-      elapsed++;
-      timerEl.textContent = fmtTime(elapsed);
-    }, 1000);
   }
 
   function stopTimer() {
-    clearInterval(timerInterval);
-    timerInterval = null;
+    if (!timerPaused) {
+      timerAccumulated += Date.now() - timerStartMs;
+    }
+    timerPaused = true;
   }
+
+  function tickTimer() {
+    if (timerPaused || !gameStarted) return;
+    elapsed = Math.floor((timerAccumulated + (Date.now() - timerStartMs)) / 1000);
+    timerEl.textContent = fmtTime(elapsed);
+    updateLiveScore();
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (!gameStarted) return;
+    if (document.hidden && !timerPaused) {
+      timerAccumulated += Date.now() - timerStartMs;
+      timerPaused = true;
+    } else if (!document.hidden && timerPaused && gameStarted) {
+      timerStartMs = Date.now();
+      timerPaused = false;
+    }
+  });
 
   /* ── RESET ── */
   function resetGame() {
@@ -256,6 +328,7 @@
     gameLocked = false;
     timerEl.textContent = "00:00";
     movesEl.textContent = "0";
+    if (liveScoreEl) liveScoreEl.textContent = "0";
     overlay.classList.remove("visible");
     buildGrid();
     showBest();
@@ -265,9 +338,7 @@
   startBtn.addEventListener("click", resetGame);
 
   shareBtn.addEventListener("click", () => {
-    const { pairs } = DIFFICULTIES[currentDiff];
-    const timeBonus = Math.max(0, 300 - elapsed);
-    const score = pairs * 100 - moves * 5 + timeBonus;
+    const score = calcScore();
     const txt = `🃏 GOLDUTYA MEMORY\n${currentDiff.toUpperCase()}\n${score}pts · ${moves} moves · ${fmtTime(elapsed)}\nTry to beat me!`;
     if (navigator.share) {
       navigator.share({ title: "GOLDUTYA MEMORY", text: txt }).catch(() => {});
@@ -281,6 +352,7 @@
 
   muteBtn.addEventListener("click", () => {
     muted = !muted;
+    localStorage.setItem("goldutya-memory-mute", muted ? "1" : "0");
     muteBtn.textContent = muted ? "🔇" : "🔊";
   });
 
@@ -303,7 +375,9 @@
   });
 
   /* ── INIT ── */
+  setInterval(tickTimer, 250);
   buildGrid();
   showBest();
   overlay.classList.add("visible");
+  muteBtn.textContent = muted ? "🔇" : "🔊";
 })();

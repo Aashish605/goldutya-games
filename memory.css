@@ -415,3 +415,36 @@ body {
   .card { max-width: 120px; }
   .card-grid { max-width: 640px; gap: 12px; }
 }
+
+/* ── CONFETTI ── */
+.confetti-piece {
+  position: fixed;
+  top: -10px;
+  width: 8px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0;
+  z-index: 200;
+  pointer-events: none;
+  animation: confettiFall linear forwards;
+}
+
+@keyframes confettiFall {
+  0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
+}
+
+/* ── STARS ── */
+.stars {
+  font-size: 1.6rem;
+  color: var(--gold);
+  letter-spacing: 4px;
+  text-shadow: 0 0 10px rgba(245,197,24,0.5);
+}
+
+/* ── LIVE SCORE ── */
+#liveScore {
+  color: var(--gold2);
+  font-size: 1.4rem;
+  min-width: 40px;
+}
