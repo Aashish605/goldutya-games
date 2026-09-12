@@ -191,7 +191,13 @@ body {
   transition: border-color 0.2s, transform 0.15s;
   background-size: cover;
 }
-.skin-swatch[data-skin="default"] { background: var(--gold); }
+.skin-swatch[data-skin="default"] {
+  background: var(--gold);
+  background-image: url(assets/duck-mid.png);
+  background-size: 65%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 .skin-swatch[data-skin="neon"] { background: var(--cyan); }
 .skin-swatch[data-skin="retro"] { background: var(--red); }
 .skin-swatch.active {

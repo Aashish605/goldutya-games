@@ -25,6 +25,10 @@ let muteOn = false;
 let clouds = [];
 let keysDown = {};
 let levelClearBonus = 0;
+let paused = false;
+const MILESTONES = [100, 500, 1000, 2000];
+let lastMilestone = 0;
+let slowTimer = 0;
 
 /* --- canvas fit --- */
 function fitCanvas() {
@@ -191,6 +195,8 @@ function resetGame() {
   fitCanvas();
   score = 0; lives = 3; level = 1; frame = 0;
   levelClearBonus = 0;
+  lastMilestone = 0;
+  slowTimer = 0;
   initClouds();
   initPaddle();
   initBalls(true);
@@ -316,6 +322,20 @@ function update() {
     if (paddle.wideTimer <= 0) paddle.w = paddle.baseW;
   }
 
+  if (slowTimer > 0) {
+    slowTimer--;
+    if (slowTimer <= 0) {
+      for (const b of balls) {
+        const spd = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+        const targetSpd = levelConfig(level).baseSpeed;
+        if (spd < targetSpd) {
+          const scale = targetSpd / Math.max(spd, 0.5);
+          b.vx *= scale; b.vy *= scale;
+        }
+      }
+    }
+  }
+
   // Balls
   for (let bi = balls.length - 1; bi >= 0; bi--) {
     const b = balls[bi];
@@ -334,6 +354,8 @@ function update() {
         const spd = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
         b.vx = Math.sin(angle) * spd;
         b.vy = -Math.cos(angle) * spd;
+        const minVy = spd * 0.3;
+        if (Math.abs(b.vy) < minVy) b.vy = -minVy;
         b.y = paddle.y - paddle.h / 2 - b.r;
         bounceBlip();
         burst(b.x, b.y, GOLD, 3);
@@ -367,6 +389,16 @@ function update() {
           addPopup(br.x + br.w / 2, br.y, "+" + 10, GOLD);
           shakeDur = 4;
 
+          for (let mi = 0; mi < MILESTONES.length; mi++) {
+            if (score >= MILESTONES[mi] && lastMilestone <= mi) {
+              lastMilestone = mi + 1;
+              burst(W / 2, H * 0.3, GOLD2, 20);
+              addPopup(W / 2, H * 0.28, MILESTONES[mi] + "!", GOLD2);
+              shakeDur = 8;
+              break;
+            }
+          }
+
           // Power-up drop from 2-hit bricks
           if (br.maxHits >= 2 && Math.random() < 0.30) {
             spawnPowerUp(br.x + br.w / 2, br.y + br.h);
@@ -389,11 +421,17 @@ function update() {
     deathBlip();
     shakeDur = 16;
     burst(paddle.x, paddle.y, RED, 14);
-    addPopup(paddle.x, paddle.y - 20, lives + " LIVES LEFT", RED);
+    addPopup(paddle.x, paddle.y - 20, lives + (lives === 1 ? " LIFE LEFT" : " LIVES LEFT"), RED);
     if (lives <= 0) {
       state = "over";
-      if (score > best) { best = score; localStorage.setItem("goldutya-breakout-best", String(best)); if (bestEl) bestEl.textContent = best; }
+      const isNewBest = score > best;
+      if (isNewBest) { best = score; localStorage.setItem("goldutya-breakout-best", String(best)); if (bestEl) bestEl.textContent = best; }
       unlockCheck(score);
+      if (isNewBest && score > 0) {
+        burst(W / 2, H * 0.35, GOLD, 24);
+        addPopup(W / 2, H * 0.33, "NEW BEST!", GOLD);
+        deathBlip();
+      }
       setTimeout(showOverlay, 600);
       return;
     }
@@ -453,6 +491,10 @@ function applyPowerUp(type) {
     addPopup(paddle.x, paddle.y - 30, "WIDE PADDLE!", GREEN);
     burst(paddle.x, paddle.y, GREEN, 8);
   } else if (type === "multi") {
+    if (balls.length >= 8) {
+      addPopup(paddle.x, paddle.y - 30, "MAX BALLS!", CYAN);
+      return;
+    }
     const newBalls = [];
     for (const b of balls) {
       const spd = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
@@ -469,18 +511,9 @@ function applyPowerUp(type) {
     for (const b of balls) {
       b.vx *= 0.6; b.vy *= 0.6;
     }
+    slowTimer = 300;
     addPopup(paddle.x, paddle.y - 30, "SLOW BALL!", CYAN);
     burst(paddle.x, paddle.y, CYAN, 6);
-    setTimeout(() => {
-      for (const b of balls) {
-        const spd = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-        const targetSpd = levelConfig(level).baseSpeed;
-        if (spd < targetSpd) {
-          const scale = targetSpd / Math.max(spd, 0.5);
-          b.vx *= scale; b.vy *= scale;
-        }
-      }
-    }, 5000);
   }
 }
 
@@ -622,6 +655,22 @@ function drawHUD() {
   ctx.fillStyle = CYAN;
   ctx.fillText("LEVEL " + level, W / 2, H - GROUND_H - 12);
 
+  if (paddle.wideTimer > 0) {
+    const wideSec = Math.ceil(paddle.wideTimer / 60);
+    ctx.font = '700 12px "Bebas Neue", sans-serif';
+    ctx.fillStyle = GREEN;
+    ctx.textAlign = "center";
+    ctx.fillText("WIDE: " + wideSec + "s", W / 2, H - GROUND_H - 28);
+  }
+
+  if (slowTimer > 0) {
+    const slowSec = Math.ceil(slowTimer / 60);
+    ctx.font = '700 12px "Bebas Neue", sans-serif';
+    ctx.fillStyle = CYAN;
+    ctx.textAlign = "center";
+    ctx.fillText("SLOW: " + slowSec + "s", W / 2, H - GROUND_H - (paddle.wideTimer > 0 ? 42 : 28));
+  }
+
   ctx.restore();
 }
 
@@ -650,25 +699,24 @@ function render() {
 }
 
 function loop() {
-  // Shake
-  if (shakeDur > 0) {
-    shakeDur--;
-    shakeX = (Math.random() - 0.5) * shakeDur * 1.0;
-    shakeY = (Math.random() - 0.5) * shakeDur * 1.0;
-  } else { shakeX = 0; shakeY = 0; }
+  if (!paused) {
+    if (shakeDur > 0) {
+      shakeDur--;
+      shakeX = (Math.random() - 0.5) * shakeDur * 1.0;
+      shakeY = (Math.random() - 0.5) * shakeDur * 1.0;
+    } else { shakeX = 0; shakeY = 0; }
 
-  // Cloud drift
-  for (const c of clouds) {
-    c.x -= c.speed;
-    if (c.x < -80) { c.x = W + 60 + Math.random() * 100; c.y = H * (0.03 + Math.random() * 0.35); }
+    for (const c of clouds) {
+      c.x -= c.speed;
+      if (c.x < -80) { c.x = W + 60 + Math.random() * 100; c.y = H * (0.03 + Math.random() * 0.35); }
+    }
+
+    if (nightDir === 1) { nightPhase = Math.min(1, nightPhase + 0.018); }
+    if (nightDir === -1) { nightPhase = Math.max(0, nightPhase - 0.018); }
+
+    update();
+    render();
   }
-
-  // Night
-  if (nightDir === 1) { nightPhase = Math.min(1, nightPhase + 0.008); }
-  if (nightDir === -1) { nightPhase = Math.max(0, nightPhase - 0.008); }
-
-  update();
-  render();
   requestAnimationFrame(loop);
 }
 
@@ -683,4 +731,5 @@ resetGame();
 initClouds();
 requestAnimationFrame(loop);
 document.addEventListener("pointerdown", initAudio, { once: true });
+document.addEventListener("visibilitychange", () => { paused = document.hidden; });
 updateSkinUI();

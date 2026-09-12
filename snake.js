@@ -23,11 +23,15 @@ let W, H, dpr;
 let cellSize, cols, rows, offsetX, offsetY;
 let snake, dir, nextDir, food, powerFood, score, bestScore, frameCount;
 let interval, speedBoost, speedBoostFrames, foodEaten, state;
-let muted = false, skin = "default";
+let muted = localStorage.getItem("goldutya-snake-mute") === "1", skin = "default";
 let shakeX = 0, shakeY = 0, shakeFrames = 0;
 let nightMode = false, nightCounter = 0;
 let clouds = [];
 let audioCtx = null;
+let paused = false;
+let deathParticles = [];
+const MILESTONES = [100, 250, 500, 1000];
+let lastMilestone = 0;
 
 const duckImgs = {};
 let duckImgsLoaded = 0;
@@ -189,6 +193,8 @@ function resetAfterDeath() {
   nightMode = false;
   nightCounter = 0;
   shakeFrames = 0;
+  deathParticles = [];
+  lastMilestone = 0;
   placeFood();
 }
 
@@ -241,6 +247,13 @@ function update() {
     if (foodEaten % 5 === 0 && interval > 3) {
       interval--;
     }
+    for (let mi = 0; mi < MILESTONES.length; mi++) {
+      if (score >= MILESTONES[mi] && lastMilestone <= mi) {
+        lastMilestone = mi + 1;
+        shakeFrames = 6;
+        break;
+      }
+    }
     placeFood();
   } else if (powerFood && nx === powerFood.x && ny === powerFood.y) {
     score += 50;
@@ -256,19 +269,37 @@ function update() {
   if (!ate) snake.pop();
 
   updateClouds();
+
+  for (let i = deathParticles.length - 1; i >= 0; i--) {
+    const p = deathParticles[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life--;
+    if (p.life <= 0) deathParticles.splice(i, 1);
+  }
 }
 
 function gameOver() {
   state = "OVER";
+  const isNewBest = score > bestScore && score > 0;
   saveBest();
   sfxDeath();
   shakeFrames = 18;
-  overlayTitle.textContent = "GAME OVER";
-  overlaySub.textContent = "Score: " + score + " — " + (score >= bestScore && score > 0 ? "New best!" : "Best: " + bestScore);
+  deathParticles = [];
+  const hx = offsetX + snake[0].x * cellSize + cellSize / 2;
+  const hy = offsetY + snake[0].y * cellSize + cellSize / 2;
+  for (let i = 0; i < 20; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const s = 1.5 + Math.random() * 5;
+    deathParticles.push({ x: hx, y: hy, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 30 + Math.random() * 20, color: i % 2 === 0 ? GOLD : RED, r: 2 + Math.random() * 3 });
+  }
+  overlayTitle.textContent = isNewBest ? "NEW BEST!" : "GAME OVER";
+  overlaySub.textContent = "Score: " + score + " — " + (isNewBest ? "Amazing!" : "Best: " + bestScore);
   shareBtn.style.display = "inline-block";
   startBtn.textContent = "RETRY";
   hint.textContent = "Tap to try again!";
   overlay.classList.remove("hidden");
+  if (isNewBest) {
+    sfxPower();
+  }
 }
 
 function drawRoundedRect(x, y, w, h, r) {
@@ -421,14 +452,43 @@ function draw() {
     ctx.globalAlpha = 0.12 + Math.sin(frameCount * 0.15) * 0.08;
     ctx.fillRect(offsetX, offsetY, cols * cellSize, rows * cellSize);
     ctx.globalAlpha = 1;
+    const boostSec = Math.ceil(speedBoostFrames / 60);
+    ctx.font = `bold ${Math.max(12, cellSize * 0.6)}px var(--font-body, monospace)`;
+    ctx.textAlign = "center";
+    ctx.fillStyle = CYAN;
+    ctx.globalAlpha = 0.8;
+    ctx.fillText("SPEED: " + boostSec + "s", offsetX + cols * cellSize / 2, offsetY + 20);
+    ctx.globalAlpha = 1;
+  }
+
+  for (const p of deathParticles) {
+    ctx.globalAlpha = Math.min(1, p.life / 20);
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  if (lastMilestone > 0 && state === "PLAY") {
+    const ms = MILESTONES[lastMilestone - 1];
+    const flash = 0.3 + Math.sin(frameCount * 0.2) * 0.2;
+    ctx.font = `bold ${Math.max(10, cellSize * 0.5)}px var(--font-body, monospace)`;
+    ctx.textAlign = "left";
+    ctx.fillStyle = GOLD;
+    ctx.globalAlpha = flash;
+    ctx.fillText("★ " + ms, offsetX + 8, offsetY + 20);
+    ctx.globalAlpha = 1;
   }
 
   ctx.restore();
 }
 
 function loop() {
-  update();
-  draw();
+  if (!paused) {
+    update();
+    draw();
+  }
   requestAnimationFrame(loop);
 }
 
@@ -523,6 +583,7 @@ shareBtn.addEventListener("click", (e) => {
 muteBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   muted = !muted;
+  localStorage.setItem("goldutya-snake-mute", muted ? "1" : "0");
   muteBtn.classList.toggle("muted", muted);
   muteBtn.innerHTML = muted ? "&#128263;" : "&#128266;";
 });
@@ -552,5 +613,8 @@ initClouds();
 initGame();
 overlay.classList.remove("hidden");
 requestAnimationFrame(loop);
-
+document.addEventListener("visibilitychange", () => {
+  paused = document.hidden && state === "PLAY";
+});
+muteBtn.innerHTML = muted ? "&#128263;" : "&#128266;";
 })();
