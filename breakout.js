@@ -29,6 +29,9 @@ let paused = false;
 const MILESTONES = [100, 500, 1000, 2000];
 let lastMilestone = 0;
 let slowTimer = 0;
+let fireballTimer = 0;
+let magnetTimer = 0;
+let magnetRelease = false;
 
 /* --- canvas fit --- */
 function fitCanvas() {
@@ -197,6 +200,9 @@ function resetGame() {
   levelClearBonus = 0;
   lastMilestone = 0;
   slowTimer = 0;
+  fireballTimer = 0;
+  magnetTimer = 0;
+  magnetRelease = false;
   initClouds();
   initPaddle();
   initBalls(true);
@@ -234,6 +240,7 @@ function initBalls(centered) {
     vy: -Math.cos(angle) * speed,
     r: 8,
     speed,
+    attached: false,
   }];
 }
 
@@ -298,8 +305,24 @@ canvas.addEventListener("pointerdown", (e) => {
   onPointerMove(e.clientX);
   if (state === "ready") { state = "play"; overlay.classList.add("hidden"); return; }
   if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; return; }
+  if (magnetTimer > 0) {
+    for (const b of balls) {
+      if (b.attached) {
+        b.attached = false;
+        const spd = b.speed || 4;
+        const hitPos = (b.x - paddle.x) / (paddle.w / 2);
+        const angle = hitPos * 65 * Math.PI / 180;
+        b.vx = Math.sin(angle) * spd;
+        b.vy = -Math.cos(angle) * spd;
+        const minVy = spd * 0.3;
+        if (Math.abs(b.vy) < minVy) b.vy = -minVy;
+        burst(b.x, b.y, "#FFDF59", 4);
+        break;
+      }
+    }
+  }
 });
-document.addEventListener("keydown", (e) => { keysDown[e.code] = true; if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); initAudio(); if (state === "ready") { state = "play"; overlay.classList.add("hidden"); } if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; } } });
+document.addEventListener("keydown", (e) => { keysDown[e.code] = true; if (e.code === "Space" || e.code === "Enter" || e.code === "ArrowUp") { e.preventDefault(); initAudio(); if (state === "ready") { state = "play"; overlay.classList.add("hidden"); } if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; } if (magnetTimer > 0) { for (const b of balls) { if (b.attached) { b.attached = false; const spd = b.speed || 4; const hitPos = (b.x - paddle.x) / (paddle.w / 2); const angle = hitPos * 65 * Math.PI / 180; b.vx = Math.sin(angle) * spd; b.vy = -Math.cos(angle) * spd; const minVy = spd * 0.3; if (Math.abs(b.vy) < minVy) b.vy = -minVy; burst(b.x, b.y, "#FFDF59", 4); break; } } } } });
 document.addEventListener("keyup", (e) => { keysDown[e.code] = false; });
 
 /* --- game logic update --- */
@@ -336,9 +359,22 @@ function update() {
     }
   }
 
+  if (fireballTimer > 0) fireballTimer--;
+  if (magnetTimer > 0) magnetTimer--;
+
   // Balls
   for (let bi = balls.length - 1; bi >= 0; bi--) {
     const b = balls[bi];
+    if (b.attached) {
+      b.x = paddle.x + (b.x - paddle.x || 0);
+      b.y = paddle.y - paddle.h / 2 - b.r;
+      continue;
+    }
+
+    if (fireballTimer > 0 && frame % 2 === 0) {
+      particles.push({ x: b.x, y: b.y, vx: (Math.random() - 0.5) * 1.5, vy: Math.random() * 1.5, life: 10 + Math.random() * 6, color: Math.random() > 0.5 ? RED : "#FF6B6B", r: 1.5 + Math.random() * 2 });
+    }
+
     b.x += b.vx; b.y += b.vy;
 
     // Wall bounce
@@ -349,14 +385,21 @@ function update() {
     // Paddle bounce
     if (b.vy > 0 && b.y + b.r >= paddle.y - paddle.h / 2 && b.y - b.r <= paddle.y + paddle.h / 2) {
       if (b.x >= paddle.x - paddle.w / 2 - b.r && b.x <= paddle.x + paddle.w / 2 + b.r) {
-        const hitPos = (b.x - paddle.x) / (paddle.w / 2);
-        const angle = hitPos * 65 * Math.PI / 180;
-        const spd = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
-        b.vx = Math.sin(angle) * spd;
-        b.vy = -Math.cos(angle) * spd;
-        const minVy = spd * 0.3;
-        if (Math.abs(b.vy) < minVy) b.vy = -minVy;
-        b.y = paddle.y - paddle.h / 2 - b.r;
+        if (magnetTimer > 0 && !magnetRelease) {
+          b.attached = true;
+          b.vx = 0;
+          b.vy = 0;
+          b.y = paddle.y - paddle.h / 2 - b.r;
+        } else {
+          const hitPos = (b.x - paddle.x) / (paddle.w / 2);
+          const angle = hitPos * 65 * Math.PI / 180;
+          const spd = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+          b.vx = Math.sin(angle) * spd;
+          b.vy = -Math.cos(angle) * spd;
+          const minVy = spd * 0.3;
+          if (Math.abs(b.vy) < minVy) b.vy = -minVy;
+          b.y = paddle.y - paddle.h / 2 - b.r;
+        }
         bounceBlip();
         burst(b.x, b.y, GOLD, 3);
       }
@@ -372,14 +415,15 @@ function update() {
     for (let i = bricks.length - 1; i >= 0; i--) {
       const br = bricks[i];
       if (b.x + b.r > br.x && b.x - b.r < br.x + br.w && b.y + b.r > br.y && b.y - b.r < br.y + br.h) {
-        // Determine bounce direction
-        const overlapL = (b.x + b.r) - br.x;
-        const overlapR = (br.x + br.w) - (b.x - b.r);
-        const overlapT = (b.y + b.r) - br.y;
-        const overlapB = (br.y + br.h) - (b.y - b.r);
-        const minOverlap = Math.min(overlapL, overlapR, overlapT, overlapB);
-        if (minOverlap === overlapT || minOverlap === overlapB) b.vy = -b.vy;
-        else b.vx = -b.vx;
+        if (fireballTimer <= 0) {
+          const overlapL = (b.x + b.r) - br.x;
+          const overlapR = (br.x + br.w) - (b.x - b.r);
+          const overlapT = (b.y + b.r) - br.y;
+          const overlapB = (br.y + br.h) - (b.y - b.r);
+          const minOverlap = Math.min(overlapL, overlapR, overlapT, overlapB);
+          if (minOverlap === overlapT || minOverlap === overlapB) b.vy = -b.vy;
+          else b.vx = -b.vx;
+        }
 
         br.hits--;
         if (br.hits <= 0) {
@@ -400,7 +444,7 @@ function update() {
           }
 
           // Power-up drop from 2-hit bricks
-          if (br.maxHits >= 2 && Math.random() < 0.30) {
+          if (br.maxHits >= 2 && Math.random() < 0.35) {
             spawnPowerUp(br.x + br.w / 2, br.y + br.h);
           }
 
@@ -477,9 +521,15 @@ function update() {
 }
 
 function spawnPowerUp(x, y) {
-  const types = ["wide", "multi", "slow"];
-  const type = types[Math.floor(Math.random() * types.length)];
-  const colors = { wide: GREEN, multi: CYAN, slow: CYAN };
+  const roll = Math.random();
+  let type;
+  if (roll < 0.25) type = "wide";
+  else if (roll < 0.50) type = "fireball";
+  else if (roll < 0.65) type = "multi";
+  else if (roll < 0.80) type = "magnet";
+  else if (roll < 0.95) type = "slow";
+  else type = "life";
+  const colors = { wide: GREEN, multi: CYAN, slow: CYAN, fireball: RED, magnet: "#FFDF59", life: GOLD };
   powerUps.push({ x, y, type, color: colors[type], r: 10 });
 }
 
@@ -497,11 +547,12 @@ function applyPowerUp(type) {
     }
     const newBalls = [];
     for (const b of balls) {
+      if (b.attached) continue;
       const spd = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
       const baseAngle = Math.atan2(b.vx, -b.vy);
       for (const offset of [-30, 30]) {
         const a = baseAngle + offset * Math.PI / 180;
-        newBalls.push({ x: b.x, y: b.y, vx: Math.sin(a) * spd, vy: -Math.cos(a) * spd, r: 8, speed: spd });
+        newBalls.push({ x: b.x, y: b.y, vx: Math.sin(a) * spd, vy: -Math.cos(a) * spd, r: 8, speed: spd, attached: false });
       }
     }
     balls.push(...newBalls);
@@ -509,11 +560,29 @@ function applyPowerUp(type) {
     burst(paddle.x, paddle.y, CYAN, 10);
   } else if (type === "slow") {
     for (const b of balls) {
+      if (b.attached) continue;
       b.vx *= 0.6; b.vy *= 0.6;
     }
     slowTimer = 300;
     addPopup(paddle.x, paddle.y - 30, "SLOW BALL!", CYAN);
     burst(paddle.x, paddle.y, CYAN, 6);
+  } else if (type === "fireball") {
+    fireballTimer = 480;
+    addPopup(paddle.x, paddle.y - 30, "FIREBALL!", RED);
+    burst(paddle.x, paddle.y, RED, 10);
+  } else if (type === "life") {
+    if (lives < 5) {
+      lives++;
+      addPopup(paddle.x, paddle.y - 30, "+1 LIFE!", GOLD);
+      burst(paddle.x, paddle.y, GOLD, 12);
+    } else {
+      score += 50;
+      addPopup(paddle.x, paddle.y - 30, "+50 BONUS!", GOLD);
+    }
+  } else if (type === "magnet") {
+    magnetTimer = 720;
+    addPopup(paddle.x, paddle.y - 30, "MAGNET!", "#FFDF59");
+    burst(paddle.x, paddle.y, "#FFDF59", 8);
   }
 }
 
@@ -589,17 +658,22 @@ function drawBricks() {
 }
 
 function drawBall(b) {
+  const isFire = fireballTimer > 0 && !b.attached;
+  const glowColor = isFire ? "rgba(212,43,43," : "rgba(245,197,24,";
+  const bodyColor = isFire ? RED : GOLD;
+  const bodyColor2 = isFire ? "#FF6B6B" : GOLD2;
+
   // Glow
-  const glow = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r * 4);
-  glow.addColorStop(0, "rgba(245,197,24,0.25)");
-  glow.addColorStop(1, "rgba(245,197,24,0)");
+  const glow = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r * (isFire ? 5 : 4));
+  glow.addColorStop(0, glowColor + (isFire ? "0.4)" : "0.25)"));
+  glow.addColorStop(1, glowColor + "0)");
   ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(b.x, b.y, b.r * 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(b.x, b.y, b.r * (isFire ? 5 : 4), 0, Math.PI * 2); ctx.fill();
 
   // Ball body
-  ctx.fillStyle = GOLD;
+  ctx.fillStyle = bodyColor;
   ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = GOLD2;
+  ctx.fillStyle = bodyColor2;
   ctx.beginPath(); ctx.arc(b.x - b.r * 0.25, b.y - b.r * 0.25, b.r * 0.4, 0, Math.PI * 2); ctx.fill();
 }
 
@@ -617,6 +691,16 @@ function drawPaddle() {
   ctx.beginPath();
   ctx.roundRect(px + 4, py + 2, paddle.w - 8, paddle.h * 0.35, 4);
   ctx.fill();
+
+  if (magnetTimer > 0) {
+    ctx.strokeStyle = "#FFDF59";
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.5 + Math.sin(frame * 0.15) * 0.3;
+    ctx.beginPath();
+    ctx.roundRect(px - 2, py - 2, paddle.w + 4, paddle.h + 4, 10);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawPowerUps() {
@@ -626,8 +710,8 @@ function drawPowerUps() {
     ctx.fillStyle = "#fff";
     ctx.font = '700 10px "Bebas Neue", sans-serif';
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    const label = pu.type === "wide" ? "W" : pu.type === "multi" ? "M" : "S";
-    ctx.fillText(label, pu.x, pu.y + 1);
+    const labels = { wide: "W", multi: "M", slow: "S", fireball: "F", magnet: "\u2194", life: "\u2764" };
+    ctx.fillText(labels[pu.type] || "?", pu.x, pu.y + 1);
   }
 }
 
@@ -668,7 +752,32 @@ function drawHUD() {
     ctx.font = '700 12px "Bebas Neue", sans-serif';
     ctx.fillStyle = CYAN;
     ctx.textAlign = "center";
-    ctx.fillText("SLOW: " + slowSec + "s", W / 2, H - GROUND_H - (paddle.wideTimer > 0 ? 42 : 28));
+    let slowY = H - GROUND_H - 28;
+    if (paddle.wideTimer > 0) slowY -= 14;
+    ctx.fillText("SLOW: " + slowSec + "s", W / 2, slowY);
+  }
+
+  if (fireballTimer > 0) {
+    const fbSec = Math.ceil(fireballTimer / 60);
+    ctx.font = '700 12px "Bebas Neue", sans-serif';
+    ctx.fillStyle = RED;
+    ctx.textAlign = "center";
+    let fbY = H - GROUND_H - 28;
+    if (paddle.wideTimer > 0) fbY -= 14;
+    if (slowTimer > 0) fbY -= 14;
+    ctx.fillText("FIREBALL: " + fbSec + "s", W / 2, fbY);
+  }
+
+  if (magnetTimer > 0) {
+    const mgSec = Math.ceil(magnetTimer / 60);
+    ctx.font = '700 12px "Bebas Neue", sans-serif';
+    ctx.fillStyle = "#FFDF59";
+    ctx.textAlign = "center";
+    let mgY = H - GROUND_H - 28;
+    if (paddle.wideTimer > 0) mgY -= 14;
+    if (slowTimer > 0) mgY -= 14;
+    if (fireballTimer > 0) mgY -= 14;
+    ctx.fillText("MAGNET: " + mgSec + "s", W / 2, mgY);
   }
 
   ctx.restore();
