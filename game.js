@@ -25,6 +25,7 @@ let GRAVITY = 0.45;
 let FLAP_V = -8.5;
 let DUCK_W = 56;
 let DUCK_H = 47;
+let IS_MOBILE = false;
 
 function fitCanvas() {
   const rect = canvas.getBoundingClientRect();
@@ -35,13 +36,19 @@ function fitCanvas() {
   canvas.height = Math.round(cssH * DPR);
   W = cssW;
   H = cssH;
+  IS_MOBILE = ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   GROUND_H = Math.max(64, Math.round(H * 0.13));
   PIPE_W = Math.max(58, Math.min(90, Math.round(W * 0.18)));
   PIPE_GAP = Math.max(200, Math.min(320, Math.round(H * 0.32)));
   PIPE_SPEED = Math.max(2.2, Math.min(3.8, W * 0.006));
   PIPE_SPACING = Math.max(260, Math.round(W * 0.78));
-  GRAVITY = H * 0.001;
-  FLAP_V = -H * 0.022;
+  if (IS_MOBILE) {
+    GRAVITY = H * 0.0008;
+    FLAP_V = -H * 0.025;
+  } else {
+    GRAVITY = H * 0.001;
+    FLAP_V = -H * 0.022;
+  }
   DUCK_W = Math.max(48, Math.min(72, Math.min(W, H) * 0.12));
   DUCK_H = DUCK_W * 0.83;
 }

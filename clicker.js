@@ -26,6 +26,7 @@ let DUCK_W = 56;
 let DUCK_H = 47;
 let BASE_SPEED = 2.5;
 let BASE_SPAWN = 55;
+let IS_MOBILE = false;
 
 function fitCanvas() {
   const rect = canvas.getBoundingClientRect();
@@ -36,12 +37,19 @@ function fitCanvas() {
   canvas.height = Math.round(cssH * DPR);
   W = cssW;
   H = cssH;
+  IS_MOBILE = ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   COIN_R = Math.max(14, Math.min(24, Math.min(W, H) * 0.032));
   BOMB_R = Math.max(16, Math.min(26, Math.min(W, H) * 0.035));
   SHIELD_R = Math.max(13, Math.min(22, Math.min(W, H) * 0.028));
   DUCK_W = Math.max(48, Math.min(72, Math.min(W, H) * 0.12));
   DUCK_H = DUCK_W * 0.83;
-  BASE_SPEED = Math.max(2.0, Math.min(3.5, H * 0.003));
+  if (IS_MOBILE) {
+    BASE_SPEED = Math.max(1.8, Math.min(3.0, H * 0.0025));
+  } else {
+    BASE_SPEED = Math.max(2.0, Math.min(3.5, H * 0.003));
+  }
+  BASE_SPAWN = Math.max(35, Math.min(65, Math.round(W * 0.14)));
+}
   BASE_SPAWN = Math.max(35, Math.min(65, Math.round(W * 0.14)));
 }
 

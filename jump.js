@@ -32,6 +32,7 @@ let OB_MAX_H = 140;
 let COIN_R = 16;
 let DUCK_W = 56;
 let DUCK_H = 47;
+let IS_MOBILE = false;
 
 function fitCanvas() {
   const rect = canvas.getBoundingClientRect();
@@ -42,11 +43,17 @@ function fitCanvas() {
   canvas.height = Math.round(cssH * DPR);
   W = cssW;
   H = cssH;
+  IS_MOBILE = ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   GROUND_H = Math.max(64, Math.round(H * 0.13));
 
-  // Chrome Dino physics scaling
-  GRAVITY = H * 0.0014;
-  JUMP_V = -H * 0.027;
+  // Chrome Dino physics scaling — mobile gets softer gravity + stronger jump
+  if (IS_MOBILE) {
+    GRAVITY = H * 0.0011;
+    JUMP_V = -H * 0.030;
+  } else {
+    GRAVITY = H * 0.0014;
+    JUMP_V = -H * 0.027;
+  }
   SPEED0 = Math.max(4.0, W * 0.010);
   MAX_SPEED = SPEED0 * 2.16;
 
