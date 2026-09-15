@@ -258,7 +258,7 @@ body {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(11,11,13,0.92);
+  background: rgba(11,11,13,0.98);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,7 +266,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
 }
 
 .overlay.visible {

@@ -203,6 +203,7 @@ let currentSkin = "default";
 
     ensureAudio();
     sfxFlip();
+    TG.haptic("light");
 
     card.classList.add("flipped");
     flippedCards.push(card);

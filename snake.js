@@ -599,7 +599,36 @@ skinPicker.addEventListener("click", (e) => {
   skin = swatch.dataset.skin;
   skinPicker.querySelectorAll(".skin-swatch").forEach(s => s.classList.remove("active"));
   swatch.classList.add("active");
+  TG.haptic("light");
 });
+
+/* --- skin UI --- */
+const SKINS = [
+  { name: "Gold", id: "default", filter: "" },
+  { name: "Neon", id: "neon", filter: "hue-rotate(180deg) saturate(1.6)" },
+  { name: "Retro", id: "retro", filter: "hue-rotate(300deg) saturate(1.4)" },
+];
+
+function updateSkinUI() {
+  if (!skinPicker) return;
+  skinPicker.innerHTML = "";
+  for (const s of SKINS) {
+    const btn = document.createElement("button");
+    btn.className = "skin-swatch" + (skin === s.id ? " active" : "");
+    btn.dataset.skin = s.id;
+    btn.title = s.name;
+    const img = document.createElement("img");
+    img.src = "assets/duck-mid.png";
+    img.style.width = "28px";
+    img.style.height = "28px";
+    img.style.objectFit = "contain";
+    if (s.filter) img.style.filter = s.filter;
+    btn.appendChild(img);
+    btn.onclick = () => { skin = s.id; updateSkinUI(); };
+    skinPicker.appendChild(btn);
+  }
+}
+updateSkinUI();
 
 window.addEventListener("resize", () => {
   resize();

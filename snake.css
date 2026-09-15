@@ -179,49 +179,60 @@ body {
 .skin-picker {
   display: flex;
   gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
   margin-top: 4px;
 }
 
 .skin-swatch {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,0.2);
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.12);
+  background: rgba(11, 11, 13, 0.6);
   cursor: pointer;
-  transition: border-color 0.2s, transform 0.15s;
-  background-size: cover;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.skin-swatch[data-skin="default"] {
-  background: var(--gold);
-  background-image: url(assets/duck-mid.png);
-  background-size: 65%;
-  background-position: center;
-  background-repeat: no-repeat;
+
+.skin-swatch:not(:disabled):hover {
+  border-color: var(--gold);
+  background: rgba(245, 197, 24, 0.12);
 }
-.skin-swatch[data-skin="neon"] { background: var(--cyan); }
-.skin-swatch[data-skin="retro"] { background: var(--red); }
+
 .skin-swatch.active {
-  border-color: #fff;
-  transform: scale(1.15);
-  box-shadow: 0 0 10px rgba(255,255,255,0.3);
+  border-color: var(--gold);
+  box-shadow: 0 0 12px rgba(245, 197, 24, 0.35);
+  background: rgba(245, 197, 24, 0.18);
 }
-.skin-swatch:active { transform: scale(0.9); }
+
+.skin-swatch:active {
+  transform: scale(0.9);
+}
 
 .hint {
-  font-size: 0.65rem;
-  color: rgba(255,255,255,0.35);
+  font-size: 0.66rem;
+  color: var(--cyan);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  opacity: 0.85;
   margin-top: 8px;
 }
 
 .mini {
-  display: flex;
-  gap: 14px;
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 1px;
+  text-transform: uppercase;
   margin-top: 6px;
 }
+
 .mini a {
   font-family: var(--font-body);
-  font-size: 0.7rem;
-  color: rgba(255,255,255,0.4);
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.5);
   text-decoration: none;
   padding: 4px 10px;
   border: 1px solid rgba(255,255,255,0.12);
@@ -230,15 +241,4 @@ body {
 }
 .mini a:active { color: var(--gold); border-color: var(--gold); }
 
-.hub-link {
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  font-family: var(--font-body);
-  font-size: 0.7rem;
-  color: rgba(255,255,255,0.35);
-  text-decoration: none;
-  z-index: 25;
-  transition: color 0.2s;
-}
-.hub-link:active { color: var(--gold); }
+
