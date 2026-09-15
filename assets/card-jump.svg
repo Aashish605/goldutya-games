@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 270" width="100%" height="100%">
+  <defs>
+    <linearGradient id="jumpBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0b121e" />
+      <stop offset="70%" stop-color="#121d33" />
+      <stop offset="100%" stop-color="#1d2d4d" />
+    </linearGradient>
+  </defs>
+
+  <rect width="480" height="270" fill="url(#jumpBg)" />
+  
+  <!-- Parallax Mountains -->
+  <path d="M 0 200 L 60 150 L 140 200 L 220 130 L 320 200 L 400 140 L 480 200 L 480 270 L 0 270 Z" fill="#0A101C" opacity="0.6" />
+  <path d="M 0 215 L 90 170 L 180 215 L 280 160 L 380 215 L 480 175 L 480 270 L 0 270 Z" fill="#141E30" opacity="0.8" />
+
+  <!-- Ground Line -->
+  <rect x="0" y="220" width="480" height="50" fill="#0B0B0D" stroke="#F5C518" stroke-width="2" />
+  <line x1="0" y1="222" x2="480" y2="222" stroke="#FFDF59" stroke-width="2" />
+
+  <!-- Ground Speed Lines -->
+  <line x1="40" y1="235" x2="90" y2="235" stroke="rgba(245,197,24,0.3)" stroke-width="3" stroke-linecap="round" />
+  <line x1="160" y1="245" x2="230" y2="245" stroke="rgba(245,197,24,0.3)" stroke-width="3" stroke-linecap="round" />
+  <line x1="310" y1="235" x2="380" y2="235" stroke="rgba(245,197,24,0.3)" stroke-width="3" stroke-linecap="round" />
+
+  <!-- Obstacle Block 1 (Red Spike Block) -->
+  <rect x="290" y="180" width="30" height="40" rx="4" fill="#D42B2B" stroke="#0B0B0D" stroke-width="2.5" />
+  <path d="M 290 180 L 305 160 L 320 180 Z" fill="#D42B2B" stroke="#0B0B0D" stroke-width="2" />
+
+  <!-- Obstacle Block 2 -->
+  <rect x="410" y="190" width="25" height="30" rx="4" fill="#D42B2B" stroke="#0B0B0D" stroke-width="2" />
+
+  <!-- Duck Jumping Arc -->
+  <path d="M 100 200 Q 150 90 200 130" stroke="rgba(86,217,255,0.6)" stroke-width="3" stroke-dasharray="6,6" stroke-linecap="round" fill="none" />
+
+  <!-- Jumping Duck -->
+  <g transform="translate(165, 110) rotate(-15)">
+    <!-- Motion Dust -->
+    <circle cx="-25" cy="15" r="4" fill="rgba(255,255,255,0.4)" />
+    <circle cx="-35" cy="20" r="6" fill="rgba(255,255,255,0.2)" />
+
+    <ellipse cx="0" cy="0" rx="24" ry="18" fill="#F5C518" stroke="#0B0B0D" stroke-width="2.5" />
+    <path d="M -8 2 Q -2 16 12 4 Z" fill="#FFDF59" stroke="#0B0B0D" stroke-width="2" />
+    <circle cx="14" cy="-9" r="13" fill="#F5C518" stroke="#0B0B0D" stroke-width="2.5" />
+    <circle cx="18" cy="-12" r="3" fill="#0B0B0D" />
+    <path d="M 24 -7 Q 34 -5 30 0 Q 24 -1 24 -7 Z" fill="#D42B2B" stroke="#0B0B0D" stroke-width="2" />
+  </g>
+
+  <!-- Collectible Star -->
+  <polygon points="215,75 220,87 233,87 222,95 226,107 215,99 204,107 208,95 197,87 210,87" fill="#FFDF59" stroke="#0B0B0D" stroke-width="1.5" />
+
+  <!-- Category Badge -->
+  <rect x="15" y="15" width="65" height="22" rx="11" fill="rgba(11,11,13,0.75)" stroke="#F5C518" stroke-width="1.5" />
+  <text x="47.5" y="30" font-family="'Space Mono', monospace" font-size="10" font-weight="bold" fill="#F5C518" text-anchor="middle">RUNNER</text>
+</svg>

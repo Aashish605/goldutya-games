@@ -282,6 +282,7 @@ function gameOver() {
   const isNewBest = score > bestScore && score > 0;
   saveBest();
   sfxDeath();
+  TG.haptic("heavy");
   shakeFrames = 18;
   deathParticles = [];
   const hx = offsetX + snake[0].x * cellSize + cellSize / 2;
@@ -291,12 +292,15 @@ function gameOver() {
     const s = 1.5 + Math.random() * 5;
     deathParticles.push({ x: hx, y: hy, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 30 + Math.random() * 20, color: i % 2 === 0 ? GOLD : RED, r: 2 + Math.random() * 3 });
   }
+  if (score > 0) Leaderboard.addScore("snake", score, { speed: currentSpeed });
   overlayTitle.textContent = isNewBest ? "NEW BEST!" : "GAME OVER";
   overlaySub.textContent = "Score: " + score + " — " + (isNewBest ? "Amazing!" : "Best: " + bestScore);
   shareBtn.style.display = "inline-block";
   startBtn.textContent = "RETRY";
   hint.textContent = "Tap to try again!";
   overlay.classList.remove("hidden");
+  const lbContainer = document.getElementById("leaderboard");
+  if (lbContainer) Leaderboard.renderBoard(lbContainer, "snake", score);
   if (isNewBest) {
     sfxPower();
   }

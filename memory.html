@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="memory.css">
+  <link rel="stylesheet" href="leaderboard.css">
 </head>
 <body class="grid-bg">
   <div class="memory-container">
@@ -46,6 +47,7 @@
         <p class="overlay-sub" id="overlaySub">Match pairs to win!</p>
         <button class="btn" id="startBtn">START</button>
         <button class="share-btn" id="shareBtn" style="display:none;">SHARE SCORE</button>
+        <div id="leaderboard" class="lb-container"></div>
         <div class="skin-picker" id="skinPicker">
           <span class="skin-label">SKIN</span>
           <button class="skin-opt active" data-skin="default">🦆</button>
@@ -62,6 +64,8 @@
     </div>
   </div>
 
+  <script src="telegram.js"></script>
+  <script src="leaderboard.js"></script>
   <script src="memory.js"></script>
 </body>
 </html>

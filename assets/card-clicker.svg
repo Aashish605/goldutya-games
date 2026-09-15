@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 270" width="100%" height="100%">
+  <defs>
+    <linearGradient id="clickerBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d16" />
+      <stop offset="50%" stop-color="#141824" />
+      <stop offset="100%" stop-color="#1c1208" />
+    </linearGradient>
+    <radialGradient id="shieldGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(86,217,255,0.4)" />
+      <stop offset="100%" stop-color="rgba(86,217,255,0)" />
+    </radialGradient>
+  </defs>
+
+  <rect width="480" height="270" fill="url(#clickerBg)" />
+
+  <!-- Falling Gold Coins -->
+  <g id="falling-coins">
+    <!-- Coin 1 -->
+    <circle cx="90" cy="50" r="16" fill="#F5C518" stroke="#0B0B0D" stroke-width="2" />
+    <ellipse cx="90" cy="50" rx="10" ry="14" fill="#FFDF59" />
+    <text x="90" y="55" font-family="'Bebas Neue', sans-serif" font-size="16" font-weight="bold" fill="#0B0B0D" text-anchor="middle">₮</text>
+
+    <!-- Coin 2 (large tap target) -->
+    <circle cx="240" cy="90" r="22" fill="#F5C518" stroke="#0B0B0D" stroke-width="2.5" />
+    <circle cx="240" cy="90" r="16" fill="#FFDF59" stroke="#B88600" stroke-width="1.5" />
+    <text x="240" y="97" font-family="'Bebas Neue', sans-serif" font-size="22" font-weight="bold" fill="#0B0B0D" text-anchor="middle">₮</text>
+    <!-- Tap Ripple -->
+    <circle cx="240" cy="90" r="32" fill="none" stroke="#56D9FF" stroke-width="2.5" opacity="0.8" />
+    <circle cx="240" cy="90" r="42" fill="none" stroke="#56D9FF" stroke-width="1.5" opacity="0.4" />
+
+    <!-- Coin 3 -->
+    <circle cx="390" cy="60" r="14" fill="#F5C518" stroke="#0B0B0D" stroke-width="2" />
+    <ellipse cx="390" cy="60" rx="7" ry="12" fill="#FFDF59" />
+  </g>
+
+  <!-- Bomb -->
+  <circle cx="150" cy="110" r="14" fill="#D42B2B" stroke="#0B0B0D" stroke-width="2" />
+  <path d="M 150 96 Q 155 86 162 88" stroke="#0B0B0D" stroke-width="2" fill="none" />
+  <circle cx="163" cy="87" r="3" fill="#F5C518" />
+
+  <!-- Floating Score Popups -->
+  <text x="290" y="70" font-family="'Bebas Neue', sans-serif" font-size="24" font-weight="bold" fill="#FFDF59" stroke="#0B0B0D" stroke-width="1">+100</text>
+  <text x="70" y="110" font-family="'Bebas Neue', sans-serif" font-size="20" font-weight="bold" fill="#56D9FF" stroke="#0B0B0D" stroke-width="1">5x COMBO!</text>
+
+  <!-- Duck at bottom with Shield -->
+  <circle cx="240" cy="220" r="45" fill="url(#shieldGlow)" />
+  <circle cx="240" cy="220" r="36" fill="none" stroke="#56D9FF" stroke-width="3" stroke-dasharray="8,4" />
+
+  <g transform="translate(240, 215)">
+    <ellipse cx="0" cy="0" rx="26" ry="20" fill="#F5C518" stroke="#0B0B0D" stroke-width="2.5" />
+    <circle cx="14" cy="-9" r="13" fill="#F5C518" stroke="#0B0B0D" stroke-width="2.5" />
+    <circle cx="18" cy="-12" r="3" fill="#0B0B0D" />
+    <path d="M 24 -7 Q 34 -5 30 0 Q 24 -1 24 -7 Z" fill="#D42B2B" stroke="#0B0B0D" stroke-width="2" />
+  </g>
+
+  <!-- Category Badge -->
+  <rect x="15" y="15" width="85" height="22" rx="11" fill="rgba(11,11,13,0.75)" stroke="#FFDF59" stroke-width="1.5" />
+  <text x="57.5" y="30" font-family="'Space Mono', monospace" font-size="10" font-weight="bold" fill="#FFDF59" text-anchor="middle">TAP-TO-EARN</text>
+</svg>

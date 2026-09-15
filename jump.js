@@ -554,6 +554,7 @@ function gameOver() {
   if (shieldTimer > 0) {
     shieldTimer = 0;
     invuln = 30;
+    TG.haptic("medium");
     burst(duck.x, duck.y, CYAN, 14);
     addPopup(duck.x, duck.y - 20, "SHIELD BROKEN!", RED, 1);
     shakeDur = 10;
@@ -562,6 +563,7 @@ function gameOver() {
 
   state = states.OVER;
   thud();
+  TG.haptic("heavy");
   shakeDur = 24;
   deathFlash = 12;
   duck.isDying = true;
@@ -578,6 +580,7 @@ function gameOver() {
     localStorage.setItem("goldutya-jump-best", String(best));
     if (bestEl) bestEl.textContent = best;
   }
+  if (total > 0) Leaderboard.addScore("jump", total, { coins: coinCount, combo: maxCombo });
 
   setTimeout(() => {
     if (state !== states.OVER) return;
@@ -591,6 +594,8 @@ function gameOver() {
     const btn = overlay.querySelector(".btn");
     if (btn) btn.textContent = "PLAY AGAIN";
     if (shareBtn) { shareBtn.style.display = total > 0 ? "" : "none"; shareBtn.textContent = "SHARE SCORE"; }
+    const lbContainer = document.getElementById("leaderboard");
+    if (lbContainer) Leaderboard.renderBoard(lbContainer, "jump", total);
   }, 700);
 }
 

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 270" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0a1526" />
+      <stop offset="60%" stop-color="#0d1f3c" />
+      <stop offset="100%" stop-color="#14406b" />
+    </linearGradient>
+    <linearGradient id="pipeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D49E00" />
+      <stop offset="30%" stop-color="#F5C518" />
+      <stop offset="70%" stop-color="#FFDF59" />
+      <stop offset="100%" stop-color="#B88600" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Sky Background -->
+  <rect width="480" height="270" fill="url(#bgGrad)" />
+  
+  <!-- Grid Lines -->
+  <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+    <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(86,217,255,0.07)" stroke-width="1" />
+  </pattern>
+  <rect width="480" height="270" fill="url(#grid)" />
+
+  <!-- Stars / Cloud particles -->
+  <circle cx="80" cy="40" r="1.5" fill="#fff" opacity="0.6" />
+  <circle cx="200" cy="70" r="2" fill="#56D9FF" opacity="0.8" />
+  <circle cx="340" cy="30" r="1.5" fill="#fff" opacity="0.5" />
+  <circle cx="430" cy="90" r="2" fill="#F5C518" opacity="0.7" />
+
+  <!-- Pipes -->
+  <!-- Top Pipe 1 -->
+  <rect x="70" y="0" width="44" height="70" fill="url(#pipeGrad)" stroke="#0B0B0D" stroke-width="2" />
+  <rect x="65" y="70" width="54" height="20" rx="4" fill="url(#pipeGrad)" stroke="#0B0B0D" stroke-width="2" />
+
+  <!-- Bottom Pipe 1 -->
+  <rect x="70" y="160" width="44" height="110" fill="url(#pipeGrad)" stroke="#0B0B0D" stroke-width="2" />
+  <rect x="65" y="145" width="54" height="20" rx="4" fill="url(#pipeGrad)" stroke="#0B0B0D" stroke-width="2" />
+
+  <!-- Top Pipe 2 -->
+  <rect x="330" y="0" width="44" height="100" fill="url(#pipeGrad)" stroke="#0B0B0D" stroke-width="2" />
+  <rect x="325" y="100" width="54" height="20" rx="4" fill="url(#pipeGrad)" stroke="#0B0B0D" stroke-width="2" />
+
+  <!-- Bottom Pipe 2 -->
+  <rect x="330" y="190" width="44" height="80" fill="url(#pipeGrad)" stroke="#0B0B0D" stroke-width="2" />
+  <rect x="325" y="175" width="54" height="20" rx="4" fill="url(#pipeGrad)" stroke="#0B0B0D" stroke-width="2" />
+
+  <!-- Flying Duck -->
+  <g transform="translate(190, 115) rotate(-8)">
+    <!-- Motion Trail -->
+    <path d="M -30 0 Q -15 -10 -40 -5" stroke="#56D9FF" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.7" />
+    <path d="M -25 10 Q -10 15 -35 12" stroke="#F5C518" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8" />
+    
+    <!-- Duck Body -->
+    <ellipse cx="0" cy="0" rx="26" ry="20" fill="#F5C518" stroke="#0B0B0D" stroke-width="2.5" />
+    <!-- Wing -->
+    <path d="M -10 -4 Q 0 -18 10 -4 Z" fill="#FFDF59" stroke="#0B0B0D" stroke-width="2" />
+    <!-- Head -->
+    <circle cx="16" cy="-10" r="14" fill="#F5C518" stroke="#0B0B0D" stroke-width="2.5" />
+    <!-- Eye -->
+    <circle cx="20" cy="-13" r="3.5" fill="#0B0B0D" />
+    <circle cx="21" cy="-14" r="1" fill="#FFF" />
+    <!-- Beak -->
+    <path d="M 26 -8 Q 36 -6 32 -1 Q 26 -2 26 -8 Z" fill="#D42B2B" stroke="#0B0B0D" stroke-width="2" />
+  </g>
+
+  <!-- Floating Coins -->
+  <circle cx="250" cy="75" r="9" fill="#F5C518" stroke="#0B0B0D" stroke-width="1.5" filter="url(#glow)" />
+  <circle cx="250" cy="75" r="5" fill="#FFDF59" />
+
+  <!-- Badge Label -->
+  <rect x="15" y="15" width="65" height="22" rx="11" fill="rgba(11,11,13,0.75)" stroke="#56D9FF" stroke-width="1.5" />
+  <text x="47.5" y="30" font-family="'Space Mono', monospace" font-size="10" font-weight="bold" fill="#56D9FF" text-anchor="middle">ARCADE</text>
+</svg>

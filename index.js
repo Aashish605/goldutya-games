@@ -41,6 +41,10 @@ function renderCards(filterCat = "all") {
   }
 }
 
+document.addEventListener("click", () => {
+  if (typeof TG !== "undefined") TG.haptic("light");
+});
+
 if (filterBar) {
   filterBar.addEventListener("click", (e) => {
     const btn = e.target.closest(".filter-btn");

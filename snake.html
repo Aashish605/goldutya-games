@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="snake.css">
+<link rel="stylesheet" href="leaderboard.css">
 </head>
 <body class="grid-bg">
 <div class="stage">
@@ -23,6 +24,7 @@
 <p class="overlay-sub" id="overlaySub">Swipe, arrow keys or tap quadrants to move the duck!</p>
 <button class="btn" id="startBtn">START</button>
 <button class="btn share-btn" id="shareBtn" style="display:none;">SHARE</button>
+<div id="leaderboard" class="lb-container"></div>
 <div class="skin-picker" id="skinPicker">
 <div class="skin-swatch active" data-skin="default" title="Classic Duck"></div>
 <div class="skin-swatch" data-skin="neon" title="Neon Duck"></div>
@@ -37,6 +39,8 @@
 <a class="hub-link" href="index.html">&#8592; Hub</a>
 </div>
 </div>
+<script src="telegram.js"></script>
+<script src="leaderboard.js"></script>
 <script src="snake.js"></script>
 </body>
 </html>

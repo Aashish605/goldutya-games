@@ -443,8 +443,9 @@ function update() {
             }
           }
 
-          // Power-up drop from 2-hit bricks
-          if (br.maxHits >= 2 && Math.random() < 0.35) {
+          // Power-up drop (35% from 2-hit bricks, 15% from 1-hit bricks)
+          const dropRate = br.maxHits >= 2 ? 0.35 : 0.15;
+          if (Math.random() < dropRate) {
             spawnPowerUp(br.x + br.w / 2, br.y + br.h);
           }
 
@@ -463,14 +464,17 @@ function update() {
   if (balls.length === 0) {
     lives--;
     deathBlip();
+    TG.haptic("medium");
     shakeDur = 16;
     burst(paddle.x, paddle.y, RED, 14);
     addPopup(paddle.x, paddle.y - 20, lives + (lives === 1 ? " LIFE LEFT" : " LIVES LEFT"), RED);
     if (lives <= 0) {
       state = "over";
+      TG.haptic("heavy");
       const isNewBest = score > best;
       if (isNewBest) { best = score; localStorage.setItem("goldutya-breakout-best", String(best)); if (bestEl) bestEl.textContent = best; }
       unlockCheck(score);
+      if (score > 0) Leaderboard.addScore("breakout", score, { level });
       if (isNewBest && score > 0) {
         burst(W / 2, H * 0.35, GOLD, 24);
         addPopup(W / 2, H * 0.33, "NEW BEST!", GOLD);
@@ -593,6 +597,8 @@ function showOverlay() {
   const btn = overlay.querySelector(".btn");
   if (btn) btn.textContent = "PLAY AGAIN";
   if (shareBtn) { shareBtn.style.display = score > 0 ? "" : "none"; shareBtn.textContent = "SHARE SCORE"; }
+  const lbContainer = document.getElementById("leaderboard");
+  if (lbContainer) Leaderboard.renderBoard(lbContainer, "breakout", score);
 }
 
 /* --- drawing --- */

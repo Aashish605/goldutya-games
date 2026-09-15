@@ -422,6 +422,7 @@ function drawParticles() {
 /* ---------- input ---------- */
 function flap() {
   initAudio();
+  TG.haptic("light");
   if (state === states.OVER) reset();
   if (state === states.READY || state === states.OVER) {
     state = states.PLAY;
@@ -470,6 +471,7 @@ function gameOver() {
   if (state !== states.PLAY) return;
   state = states.OVER;
   thud();
+  TG.haptic("heavy");
   shakeDur = 24;
   burst(duck.x, duck.y, RED, 18);
   burst(duck.x, duck.y, GOLD, 12);
@@ -479,6 +481,7 @@ function gameOver() {
     localStorage.setItem("goldutya-fly-best", String(best));
     bestEl.textContent = best;
   }
+  if (score > 0) Leaderboard.addScore("fly", score, { combo: maxCombo });
   setTimeout(() => {
     if (state !== states.OVER) return;
     overlay.classList.remove("hidden");
@@ -494,6 +497,8 @@ function gameOver() {
       shareBtn.style.display = score > 0 ? "" : "none";
       shareBtn.textContent = "SHARE SCORE";
     }
+    const lbContainer = document.getElementById("leaderboard");
+    if (lbContainer) Leaderboard.renderBoard(lbContainer, "fly", score);
   }, 850);
 }
 
@@ -579,6 +584,7 @@ function update() {
       const pts = 1 + Math.floor(combo / 3);
       score += pts - 1;
       scoreScale = 1.4;
+      TG.haptic("light");
       if (combo >= 3) comboBlip(combo);
       else scoreBlip();
       burst(duck.x + 16, duck.y - 18, GOLD2, 7);

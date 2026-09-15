@@ -662,6 +662,7 @@ function gameOver(cause) {
   state = states.OVER;
   deathCause = cause || "timeout";
   thud();
+  TG.haptic("heavy");
   shakeDur = 24;
   deathFlash = 12;
   burst(W / 2, H - 80, RED, 20);
@@ -676,6 +677,7 @@ function gameOver(cause) {
     beep(440, 0.3, "sine", 0.2, 880);
     scoreScale = 1.8;
   }
+  if (score > 0) Leaderboard.addScore("clicker", score, { combo: maxCombo, cause: deathCause });
   setTimeout(function() {
     if (state !== states.OVER) return;
     overlay.classList.remove("hidden");
@@ -690,6 +692,8 @@ function gameOver(cause) {
     const btn = overlay.querySelector(".btn");
     if (btn) btn.textContent = "PLAY AGAIN";
     if (shareBtn) { shareBtn.style.display = score > 0 ? "" : "none"; shareBtn.textContent = "SHARE SCORE"; }
+    const lbContainer = document.getElementById("leaderboard");
+    if (lbContainer) Leaderboard.renderBoard(lbContainer, "clicker", score);
   }, 700);
 }
 

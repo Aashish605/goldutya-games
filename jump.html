@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="jump.css" />
+  <link rel="stylesheet" href="leaderboard.css" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A6%86%3C/text%3E%3C/svg%3E" />
 </head>
 <body class="grid-bg">
@@ -29,6 +30,7 @@
       <p class="overlay-sub">Duck runs. Tap to jump. Dodge crates. Collect gold.</p>
       <button id="startBtn" class="btn">START</button>
       <button id="shareBtn" class="btn share-btn" style="display:none">SHARE SCORE</button>
+      <div id="leaderboard" class="lb-container"></div>
       <div id="skinPicker" class="skin-picker"></div>
       <p class="hint">tap / click / space / up-arrow to jump</p>
       <p class="mini">Play-to-earn on the TON ecosystem</p>
@@ -36,6 +38,8 @@
     </div>
   </div>
 
+  <script src="telegram.js"></script>
+  <script src="leaderboard.js"></script>
   <script src="jump.js"></script>
 </body>
 </html>

@@ -258,12 +258,14 @@ let currentSkin = "default";
   function handleWin() {
     stopTimer();
     sfxWin();
+    TG.haptic("success");
     const score = calcScore();
     const stars = getStars(moves, currentDiff);
     const prev = loadBestFor(currentDiff);
     const isNewBest = !prev || score > prev.score || (score === prev.score && moves < prev.moves);
 
     saveBest(currentDiff, score, moves, elapsed);
+    if (score > 0) Leaderboard.addScore("memory", score, { moves, difficulty: currentDiff, stars });
 
     overlayTitle.textContent = isNewBest ? "NEW BEST!" : "YOU WIN!";
     overlaySub.innerHTML = `<span class="stars">${renderStars(stars)}</span><br>${score}pts · ${moves} moves · ${fmtTime(elapsed)}`;
@@ -271,6 +273,8 @@ let currentSkin = "default";
     shareBtn.style.display = "inline-block";
     overlay.classList.add("visible");
     showBest();
+    const lbContainer = document.getElementById("leaderboard");
+    if (lbContainer) Leaderboard.renderBoard(lbContainer, "memory", score);
 
     spawnConfetti();
     if (isNewBest) {
