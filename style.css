@@ -276,3 +276,23 @@ body {
   opacity: 0.35;
   cursor: default;
 }
+
+.btn-back {
+  display: inline-block;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--gold);
+  font: 700 15px/1 "Space Mono", monospace;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  margin-bottom: 12px;
+}
+
+.btn-back:hover {
+  background: rgba(245, 197, 24, 0.12);
+  border-color: var(--gold);
+}

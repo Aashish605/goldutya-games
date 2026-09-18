@@ -19,7 +19,16 @@ const TG = (() => {
     }
     const u = user();
     if (u) localStorage.setItem("goldutya-player-name", u.username || u.firstName);
+    setupBackButton();
     return true;
+  }
+
+  function setupBackButton() {
+    if (!tg?.BackButton) return;
+    const onHub = location.pathname === "/" || location.pathname.endsWith("index.html");
+    if (onHub) { tg.BackButton.hide(); return; }
+    tg.BackButton.show();
+    tg.BackButton.onClick(() => { location.href = "index.html"; });
   }
 
   function haptic(style) {
