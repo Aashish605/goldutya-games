@@ -237,6 +237,7 @@ function initClouds() {
 
 /* ---------- reset ---------- */
 function reset() {
+  Leaderboard.promptName();
   fitCanvas();
   items = [];
   particles = [];

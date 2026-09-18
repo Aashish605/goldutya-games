@@ -193,6 +193,7 @@ function toggleMute() {
 }
 
 function reset() {
+  Leaderboard.promptName();
   fitCanvas();
   duck = {
     x: W * 0.32,

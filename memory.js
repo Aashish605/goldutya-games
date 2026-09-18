@@ -324,6 +324,7 @@ let currentSkin = "default";
 
   /* ── RESET ── */
   function resetGame() {
+    Leaderboard.promptName();
     stopTimer();
     elapsed = 0;
     moves = 0;

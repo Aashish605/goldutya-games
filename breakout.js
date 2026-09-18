@@ -195,6 +195,7 @@ function buildBricks(lv) {
 
 /* --- reset --- */
 function resetGame() {
+  Leaderboard.promptName();
   fitCanvas();
   score = 0; lives = 3; level = 1; frame = 0;
   levelClearBonus = 0;

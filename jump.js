@@ -218,6 +218,7 @@ function togglePause() {
 function groundY() { return H - GROUND_H - DUCK_H * 0.35; }
 
 function reset() {
+  Leaderboard.promptName();
   fitCanvas();
   duck = {
     x: W * 0.22,

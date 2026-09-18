@@ -5,14 +5,21 @@ const Leaderboard = (() => {
   const STORAGE_KEY = "goldutya-leaderboard";
 
   function getAll() {
+    if (!localStorage.getItem("goldutya-lb-wiped")) {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem("goldutya-lb-wiped", "1");
+    }
     try {
       return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     } catch { return {}; }
   }
 
-  function getGame(gameId) {
-    const all = getAll();
-    return all[gameId] || [];
+  function resolveName() {
+    const user = TG.user();
+    const stored = localStorage.getItem("goldutya-player-name");
+    if (user) return user.username || user.firstName || "Anonymous";
+    if (stored) return stored;
+    return "Anonymous";
   }
 
   function addScore(gameId, score, meta) {
@@ -22,7 +29,7 @@ const Leaderboard = (() => {
     const user = TG.user();
     const entry = {
       score,
-      name: user ? user.firstName : "Anonymous",
+      name: resolveName(),
       userId: user ? user.id : 0,
       avatar: user ? user.photoUrl : "",
       date: Date.now(),
@@ -31,7 +38,7 @@ const Leaderboard = (() => {
 
     all[gameId].push(entry);
     all[gameId].sort((a, b) => b.score - a.score);
-    all[gameId] = all[gameId].slice(0, 100); // keep top 100
+    all[gameId] = all[gameId].slice(0, 100);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
     return all[gameId];
   }
@@ -61,9 +68,17 @@ const Leaderboard = (() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
   }
 
+  function promptName() {
+    if (TG.user()) return;
+    if (localStorage.getItem("goldutya-player-name")) return;
+    const name = prompt("Enter your name for the leaderboard:");
+    if (name && name.trim()) {
+      localStorage.setItem("goldutya-player-name", name.trim().slice(0, 20));
+    }
+  }
+
   function renderBoard(container, gameId, myScore) {
     const top = getTop(gameId, 10);
-    const user = TG.user();
     let html = '<div class="lb-header">LEADERBOARD</div>';
 
     if (top.length === 0) {
@@ -71,6 +86,7 @@ const Leaderboard = (() => {
     } else {
       html += '<div class="lb-list">';
       top.forEach((e, i) => {
+        const user = TG.user();
         const isMe = user && e.userId === user.id;
         const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : (i + 1);
         html += '<div class="lb-row' + (isMe ? ' lb-me' : '') + '">';
@@ -89,5 +105,5 @@ const Leaderboard = (() => {
     container.innerHTML = html;
   }
 
-  return { getGame, addScore, getTop, getMyRank, getMyBest, clearGame, renderBoard };
+  return { getGame, addScore, getTop, getMyRank, getMyBest, clearGame, promptName, renderBoard };
 })();

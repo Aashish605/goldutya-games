@@ -17,6 +17,8 @@ const TG = (() => {
     if (tg.BackButton) {
       tg.BackButton.hide();
     }
+    const u = user();
+    if (u) localStorage.setItem("goldutya-player-name", u.username || u.firstName);
     return true;
   }
 

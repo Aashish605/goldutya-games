@@ -151,6 +151,7 @@ function placeFood() {
 }
 
 function initGame() {
+  Leaderboard.promptName();
   resize();
   const cx = Math.floor(cols / 2);
   const cy = Math.floor(rows / 2);
