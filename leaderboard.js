@@ -32,16 +32,26 @@ const Leaderboard = (() => {
     if (!all[gameId]) all[gameId] = [];
 
     const user = TG.user();
-    const entry = {
-      score,
-      name: resolveName(),
-      userId: user ? user.id : 0,
-      avatar: user ? user.photoUrl : "",
-      date: Date.now(),
-      ...meta,
-    };
+    const userId = user ? user.id : 0;
+    const existing = all[gameId].find(e => e.userId === userId);
 
-    all[gameId].push(entry);
+    if (existing) {
+      if (score <= existing.score) return all[gameId];
+      existing.score = score;
+      existing.name = resolveName();
+      existing.date = Date.now();
+      Object.assign(existing, meta);
+    } else {
+      all[gameId].push({
+        score,
+        name: resolveName(),
+        userId,
+        avatar: user ? user.photoUrl : "",
+        date: Date.now(),
+        ...meta,
+      });
+    }
+
     all[gameId].sort((a, b) => b.score - a.score);
     all[gameId] = all[gameId].slice(0, 100);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
