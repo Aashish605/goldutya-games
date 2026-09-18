@@ -50,8 +50,6 @@ function fitCanvas() {
   }
   BASE_SPAWN = Math.max(35, Math.min(65, Math.round(W * 0.14)));
 }
-  BASE_SPAWN = Math.max(35, Math.min(65, Math.round(W * 0.14)));
-}
 
 if (typeof ResizeObserver !== "undefined") {
   new ResizeObserver(fitCanvas).observe(canvas);
