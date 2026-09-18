@@ -37,7 +37,7 @@ function fitCanvas() {
   canvas.height = Math.round(cssH * DPR);
   W = cssW;
   H = cssH;
-  IS_MOBILE = ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  IS_MOBILE = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform)) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
   COIN_R = Math.max(14, Math.min(24, Math.min(W, H) * 0.032));
   BOMB_R = Math.max(16, Math.min(26, Math.min(W, H) * 0.035));
   SHIELD_R = Math.max(13, Math.min(22, Math.min(W, H) * 0.028));

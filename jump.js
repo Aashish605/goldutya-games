@@ -43,13 +43,13 @@ function fitCanvas() {
   canvas.height = Math.round(cssH * DPR);
   W = cssW;
   H = cssH;
-  IS_MOBILE = ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  IS_MOBILE = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform)) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
   GROUND_H = Math.max(64, Math.round(H * 0.13));
 
   // Chrome Dino physics scaling — mobile gets softer gravity + stronger jump
   if (IS_MOBILE) {
-    GRAVITY = H * 0.0011;
-    JUMP_V = -H * 0.030;
+    GRAVITY = H * 0.00126;
+    JUMP_V = -H * 0.027;
   } else {
     GRAVITY = H * 0.0014;
     JUMP_V = -H * 0.027;

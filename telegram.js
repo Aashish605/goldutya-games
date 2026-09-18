@@ -50,6 +50,10 @@ const TG = (() => {
     return !!tg;
   }
 
+  function platform() {
+    return tg?.platform || null;
+  }
+
   function showMainButton(text, color) {
     if (!tg?.MainButton) return;
     tg.MainButton.setText(text);
@@ -98,7 +102,7 @@ const TG = (() => {
   }
 
   return {
-    init, haptic, user, isTelegram,
+    init, haptic, user, isTelegram, platform,
     showMainButton, hideMainButton, onMainButton,
     showBackButton, hideBackButton, onBackButton,
     share, openLink, openTelegramLink,

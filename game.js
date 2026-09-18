@@ -36,15 +36,15 @@ function fitCanvas() {
   canvas.height = Math.round(cssH * DPR);
   W = cssW;
   H = cssH;
-  IS_MOBILE = ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600 || /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  IS_MOBILE = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform)) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
   GROUND_H = Math.max(64, Math.round(H * 0.13));
   PIPE_W = Math.max(58, Math.min(90, Math.round(W * 0.18)));
   PIPE_GAP = Math.max(200, Math.min(320, Math.round(H * 0.32)));
   PIPE_SPEED = Math.max(2.2, Math.min(3.8, W * 0.006));
   PIPE_SPACING = Math.max(260, Math.round(W * 0.78));
   if (IS_MOBILE) {
-    GRAVITY = H * 0.0008;
-    FLAP_V = -H * 0.025;
+    GRAVITY = H * 0.00095;
+    FLAP_V = -H * 0.022;
   } else {
     GRAVITY = H * 0.001;
     FLAP_V = -H * 0.022;
