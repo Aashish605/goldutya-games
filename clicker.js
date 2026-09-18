@@ -237,7 +237,6 @@ function initClouds() {
 
 /* ---------- reset ---------- */
 function reset() {
-  Leaderboard.promptName();
   fitCanvas();
   items = [];
   particles = [];
@@ -995,3 +994,4 @@ if (muteBtn) {
   muteBtn.addEventListener("click", function(e) { e.stopPropagation(); toggleMute(); });
 }
 if (shareBtn) shareBtn.addEventListener("click", function(e) { e.stopPropagation(); shareScore(); });
+setTimeout(() => Leaderboard.promptName(), 500);

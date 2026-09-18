@@ -193,7 +193,6 @@ function toggleMute() {
 }
 
 function reset() {
-  Leaderboard.promptName();
   fitCanvas();
   duck = {
     x: W * 0.32,
@@ -666,3 +665,4 @@ if (muteBtn) muteBtn.textContent = muteOn ? "🔇" : "🔊";
 if (muteBtn) muteBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(); });
 const shareBtn = document.getElementById("shareBtn");
 if (shareBtn) shareBtn.addEventListener("click", (e) => { e.stopPropagation(); shareScore(); });
+setTimeout(() => Leaderboard.promptName(), 500);

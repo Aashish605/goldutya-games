@@ -324,7 +324,6 @@ let currentSkin = "default";
 
   /* ── RESET ── */
   function resetGame() {
-    Leaderboard.promptName();
     stopTimer();
     elapsed = 0;
     moves = 0;
@@ -386,4 +385,5 @@ let currentSkin = "default";
   showBest();
   overlay.classList.add("visible");
   muteBtn.textContent = muted ? "🔇" : "🔊";
+  setTimeout(() => Leaderboard.promptName(), 500);
 })();

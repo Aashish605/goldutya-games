@@ -64,7 +64,8 @@ function unlockCheck(total) {
   if (changed) {
     localStorage.setItem("goldutya-breakout-skins", JSON.stringify(unlockedSkins));
     activeSkin = unlockedSkins[unlockedSkins.length - 1];
-    updateSkinUI();
+updateSkinUI();
+setTimeout(() => Leaderboard.promptName(), 500);
   }
 }
 
@@ -195,7 +196,6 @@ function buildBricks(lv) {
 
 /* --- reset --- */
 function resetGame() {
-  Leaderboard.promptName();
   fitCanvas();
   score = 0; lives = 3; level = 1; frame = 0;
   levelClearBonus = 0;

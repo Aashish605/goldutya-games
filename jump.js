@@ -218,7 +218,6 @@ function togglePause() {
 function groundY() { return H - GROUND_H - DUCK_H * 0.35; }
 
 function reset() {
-  Leaderboard.promptName();
   fitCanvas();
   duck = {
     x: W * 0.22,
@@ -1004,3 +1003,4 @@ if (muteBtn) {
   muteBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(); });
 }
 if (shareBtn) shareBtn.addEventListener("click", (e) => { e.stopPropagation(); shareScore(); });
+setTimeout(() => Leaderboard.promptName(), 500);

@@ -151,7 +151,6 @@ function placeFood() {
 }
 
 function initGame() {
-  Leaderboard.promptName();
   resize();
   const cx = Math.floor(cols / 2);
   const cy = Math.floor(rows / 2);
@@ -651,4 +650,5 @@ document.addEventListener("visibilitychange", () => {
   paused = document.hidden && state === "PLAY";
 });
 muteBtn.innerHTML = muted ? "&#128263;" : "&#128266;";
+setTimeout(() => Leaderboard.promptName(), 500);
 })();

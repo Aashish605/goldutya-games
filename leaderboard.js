@@ -14,6 +14,11 @@ const Leaderboard = (() => {
     } catch { return {}; }
   }
 
+  function getGame(gameId) {
+    const all = getAll();
+    return all[gameId] || [];
+  }
+
   function resolveName() {
     const user = TG.user();
     const stored = localStorage.getItem("goldutya-player-name");
