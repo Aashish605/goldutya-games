@@ -67,9 +67,9 @@ function resize() {
   offsetX = Math.floor((W - cols * cellSize) / 2);
   offsetY = Math.floor((H - rows * cellSize) / 2);
   isMobile = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform)) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
-  joyR = Math.max(70, Math.min(100, W * 0.18));
+  joyR = Math.max(80, Math.min(120, W * 0.22));
   joyBaseX = W / 2;
-  joyBaseY = H - joyR - 50;
+  joyBaseY = H - joyR - 160;
   joyKnobX = joyBaseX;
   joyKnobY = joyBaseY;
 }
@@ -515,16 +515,21 @@ function loop() {
 function drawJoystick() {
   if (!isMobile || state !== "PLAY") return;
   ctx.save();
-  ctx.globalAlpha = 0.3;
+  ctx.globalAlpha = 0.25;
   ctx.strokeStyle = "#fff";
   ctx.lineWidth = 3;
   ctx.beginPath();
   ctx.arc(joyBaseX, joyBaseY, joyR, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.globalAlpha = joyActive ? 0.6 : 0.4;
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(joyBaseX, joyBaseY, joyR, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = joyActive ? 0.55 : 0.35;
   ctx.fillStyle = joyActive ? GOLD : "#fff";
   ctx.beginPath();
-  ctx.arc(joyKnobX, joyKnobY, joyR * 0.38, 0, Math.PI * 2);
+  ctx.arc(joyKnobX, joyKnobY, joyR * 0.35, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
