@@ -35,6 +35,12 @@ let hintTimer = 0;
 const MILESTONES = [100, 250, 500, 1000];
 let lastMilestone = 0;
 
+const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || ("ontouchstart" in window);
+let joyBaseX = 0, joyBaseY = 0, joyR = 50;
+let joyKnobX = 0, joyKnobY = 0;
+let joyActive = false, joyTouchId = null;
+let joyDirX = 0, joyDirY = 0;
+
 const duckImgs = {};
 let duckImgsLoaded = 0;
 
@@ -60,6 +66,11 @@ function resize() {
   rows = Math.floor(H / cellSize);
   offsetX = Math.floor((W - cols * cellSize) / 2);
   offsetY = Math.floor((H - rows * cellSize) / 2);
+  joyR = Math.max(36, Math.min(60, W * 0.08));
+  joyBaseX = joyR + 28;
+  joyBaseY = H - joyR - 28;
+  joyKnobX = joyBaseX;
+  joyKnobY = joyBaseY;
 }
 
 function initClouds() {
@@ -488,6 +499,7 @@ function draw() {
     ctx.globalAlpha = 1;
   }
 
+  drawJoystick();
   ctx.restore();
 }
 
@@ -499,6 +511,23 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
+function drawJoystick() {
+  if (!isMobile || state !== "PLAY") return;
+  ctx.save();
+  ctx.globalAlpha = 0.15;
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(joyBaseX, joyBaseY, joyR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.globalAlpha = joyActive ? 0.35 : 0.18;
+  ctx.fillStyle = joyActive ? GOLD : "#fff";
+  ctx.beginPath();
+  ctx.arc(joyKnobX, joyKnobY, joyR * 0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawHint() {
   if (hintShown || hintTimer <= 0) return;
   hintTimer--;
@@ -508,7 +537,7 @@ function drawHint() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#fff";
-  ctx.fillText("SWIPE TO TURN", W / 2, H / 2);
+  ctx.fillText(isMobile ? "USE JOYSTICK" : "SWIPE TO TURN", W / 2, H / 2);
   ctx.restore();
   if (hintTimer <= 0 && !hintShown) {
     hintShown = true;
@@ -557,16 +586,73 @@ function handleTapQuadrant(cx, cy) {
 
 let touchStartX, touchStartY;
 
+function joyHitTest(cx, cy) {
+  const jx = joyBaseX / dpr, jy = joyBaseY / dpr, jr = joyR / dpr;
+  const dx = cx - jx, dy = cy - jy;
+  return Math.sqrt(dx * dx + dy * dy) <= jr * 1.3;
+}
+
+function joyUpdate(cx, cy) {
+  const dx = (cx * dpr) - joyBaseX;
+  const dy = (cy * dpr) - joyBaseY;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const maxDist = joyR * 0.9;
+  if (dist > maxDist) {
+    joyKnobX = joyBaseX + (dx / dist) * maxDist;
+    joyKnobY = joyBaseY + (dy / dist) * maxDist;
+  } else {
+    joyKnobX = cx * dpr;
+    joyKnobY = cy * dpr;
+  }
+  if (dist > joyR * 0.25) {
+    const angle = Math.atan2(dy, dx);
+    if (Math.abs(dx) > Math.abs(dy)) {
+      setDir(dx > 0 ? 1 : -1, 0);
+    } else {
+      setDir(0, dy > 0 ? 1 : -1);
+    }
+  }
+}
+
 canvas.addEventListener("touchstart", (e) => {
   e.preventDefault();
   if (state === "READY") { startGame(); return; }
+  for (const t of e.changedTouches) {
+    if (isMobile && joyHitTest(t.clientX, t.clientY)) {
+      joyActive = true;
+      joyTouchId = t.identifier;
+      joyUpdate(t.clientX, t.clientY);
+      return;
+    }
+  }
   const t = e.touches[0];
   touchStartX = t.clientX;
   touchStartY = t.clientY;
 }, { passive: false });
 
+canvas.addEventListener("touchmove", (e) => {
+  e.preventDefault();
+  if (joyActive) {
+    for (const t of e.changedTouches) {
+      if (t.identifier === joyTouchId) {
+        joyUpdate(t.clientX, t.clientY);
+        return;
+      }
+    }
+  }
+}, { passive: false });
+
 canvas.addEventListener("touchend", (e) => {
   e.preventDefault();
+  for (const t of e.changedTouches) {
+    if (t.identifier === joyTouchId) {
+      joyActive = false;
+      joyTouchId = null;
+      joyKnobX = joyBaseX;
+      joyKnobY = joyBaseY;
+      return;
+    }
+  }
   if (state !== "PLAY") return;
   const t = e.changedTouches[0];
   const dx = t.clientX - touchStartX;

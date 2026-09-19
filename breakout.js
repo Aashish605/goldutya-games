@@ -328,6 +328,7 @@ canvas.addEventListener("pointerdown", (e) => {
     for (const b of balls) {
       if (b.attached) {
         b.attached = false;
+        magnetRelease = true;
         const spd = b.speed || 4;
         const hitPos = (b.x - paddle.x) / (paddle.w / 2);
         const angle = hitPos * 65 * Math.PI / 180;
@@ -341,7 +342,7 @@ canvas.addEventListener("pointerdown", (e) => {
     }
   }
 });
-document.addEventListener("keydown", (e) => { keysDown[e.code] = true; if (e.code === "Space" || e.code === "Enter" || e.code === "ArrowUp") { e.preventDefault(); initAudio(); if (state === "ready") { state = "play"; overlay.classList.add("hidden"); if (!hintShown) hintTimer = 120; } if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; } if (magnetTimer > 0) { for (const b of balls) { if (b.attached) { b.attached = false; const spd = b.speed || 4; const hitPos = (b.x - paddle.x) / (paddle.w / 2); const angle = hitPos * 65 * Math.PI / 180; b.vx = Math.sin(angle) * spd; b.vy = -Math.cos(angle) * spd; const minVy = spd * 0.3; if (Math.abs(b.vy) < minVy) b.vy = -minVy; burst(b.x, b.y, "#FFDF59", 4); break; } } } } });
+document.addEventListener("keydown", (e) => { keysDown[e.code] = true; if (e.code === "Space" || e.code === "Enter" || e.code === "ArrowUp") { e.preventDefault(); initAudio(); if (state === "ready") { state = "play"; overlay.classList.add("hidden"); if (!hintShown) hintTimer = 120; } if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; } if (magnetTimer > 0) { for (const b of balls) { if (b.attached) { b.attached = false; magnetRelease = true; const spd = b.speed || 4; const hitPos = (b.x - paddle.x) / (paddle.w / 2); const angle = hitPos * 65 * Math.PI / 180; b.vx = Math.sin(angle) * spd; b.vy = -Math.cos(angle) * spd; const minVy = spd * 0.3; if (Math.abs(b.vy) < minVy) b.vy = -minVy; burst(b.x, b.y, "#FFDF59", 4); break; } } } } });
 document.addEventListener("keyup", (e) => { keysDown[e.code] = false; });
 
 /* --- game logic update --- */
@@ -379,7 +380,10 @@ function update() {
   }
 
   if (fireballTimer > 0) fireballTimer--;
-  if (magnetTimer > 0) magnetTimer--;
+  if (magnetTimer > 0) {
+    magnetTimer--;
+    if (magnetTimer <= 0) magnetRelease = false;
+  }
 
   // Balls
   for (let bi = balls.length - 1; bi >= 0; bi--) {
@@ -604,6 +608,7 @@ function applyPowerUp(type) {
     }
   } else if (type === "magnet") {
     magnetTimer = 720;
+    magnetRelease = false;
     addPopup(paddle.x, paddle.y - 30, "MAGNET!", "#FFDF59");
     burst(paddle.x, paddle.y, "#FFDF59", 8);
   }
