@@ -67,9 +67,9 @@ function resize() {
   offsetX = Math.floor((W - cols * cellSize) / 2);
   offsetY = Math.floor((H - rows * cellSize) / 2);
   isMobile = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform)) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
-  joyR = Math.max(36, Math.min(60, W * 0.08));
-  joyBaseX = joyR + 28;
-  joyBaseY = H - joyR - 28;
+  joyR = Math.max(50, Math.min(80, W * 0.12));
+  joyBaseX = joyR + 30;
+  joyBaseY = H - joyR - 120;
   joyKnobX = joyBaseX;
   joyKnobY = joyBaseY;
 }

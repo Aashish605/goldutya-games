@@ -43,7 +43,7 @@ function fitCanvas() {
   PIPE_SPEED = Math.max(2.2, Math.min(3.8, W * 0.006));
   PIPE_SPACING = Math.max(260, Math.round(W * 0.78));
   if (IS_MOBILE) {
-    GRAVITY = H * 0.00095;
+    GRAVITY = H * 0.00085;
     FLAP_V = -H * 0.022;
   } else {
     GRAVITY = H * 0.001;

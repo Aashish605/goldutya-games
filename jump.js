@@ -48,7 +48,7 @@ function fitCanvas() {
 
   // Chrome Dino physics scaling — mobile gets softer gravity + stronger jump
   if (IS_MOBILE) {
-    GRAVITY = H * 0.00126;
+    GRAVITY = H * 0.00113;
     JUMP_V = -H * 0.027;
   } else {
     GRAVITY = H * 0.0014;
