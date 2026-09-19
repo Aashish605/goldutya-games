@@ -703,7 +703,7 @@ function gameOver(cause) {
     beep(440, 0.3, "sine", 0.2, 880);
     scoreScale = 1.8;
   }
-  if (score > 0) { Leaderboard.promptName(); Leaderboard.addScore("clicker", score, { combo: maxCombo, cause: deathCause }); }
+  if (score > 0) { Leaderboard.addScore("clicker", score, { combo: maxCombo, cause: deathCause }); setTimeout(() => Leaderboard.promptName(), 0); }
   setTimeout(function() {
     if (state !== states.OVER) return;
     overlay.classList.remove("hidden");

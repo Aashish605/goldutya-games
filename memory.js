@@ -281,7 +281,7 @@ let elapsed = 0;
     const isNewBest = !prev || score > prev.score || (score === prev.score && moves < prev.moves);
 
     saveBest(currentDiff, score, moves, elapsed);
-    if (score > 0) { Leaderboard.promptName(); Leaderboard.addScore("memory", score, { moves, difficulty: currentDiff, stars }); }
+    if (score > 0) { Leaderboard.addScore("memory", score, { moves, difficulty: currentDiff, stars }); setTimeout(() => Leaderboard.promptName(), 0); }
 
     overlayTitle.textContent = isNewBest ? "NEW BEST!" : "YOU WIN!";
     overlaySub.innerHTML = `<span class="stars">${renderStars(stars)}</span><br>${score}pts · ${moves} moves · ${fmtTime(elapsed)}`;

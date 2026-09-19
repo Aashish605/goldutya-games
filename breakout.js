@@ -497,7 +497,7 @@ function update() {
       const isNewBest = score > best;
       if (isNewBest) { best = score; localStorage.setItem("goldutya-breakout-best", String(best)); if (bestEl) bestEl.textContent = best; }
       unlockCheck(score);
-      if (score > 0) { Leaderboard.promptName(); Leaderboard.addScore("breakout", score, { level }); }
+      if (score > 0) { Leaderboard.addScore("breakout", score, { level }); setTimeout(() => Leaderboard.promptName(), 0); }
       if (isNewBest && score > 0) {
         burst(W / 2, H * 0.35, GOLD, 24);
         addPopup(W / 2, H * 0.33, "NEW BEST!", GOLD);
