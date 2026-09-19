@@ -150,6 +150,8 @@ let shieldTimer = 0, magnetTimer = 0;
 let nightPhase = 0, nightDir = 0, nightTimer = 0;
 let muteOn = false;
 let jumpBuffer = 0;
+let hintShown = localStorage.getItem("goldutya-jump-hinted") === "1";
+let hintTimer = 0;
 
 best = Number(localStorage.getItem("goldutya-jump-best") || 0);
 if (bestEl) bestEl.textContent = best;
@@ -497,6 +499,23 @@ function drawParticles() {
   ctx.globalAlpha = 1;
 }
 
+/* ---------- hint ---------- */
+function drawHint() {
+  if (hintShown || hintTimer <= 0) return;
+  hintTimer--;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, hintTimer / 30);
+  ctx.font = '700 ' + Math.round(H * 0.04) + 'px "Bebas Neue", sans-serif';
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("TAP TO JUMP", W / 2, H / 2);
+  ctx.restore();
+  if (hintTimer <= 0 && !hintShown) {
+    hintShown = true;
+    localStorage.setItem("goldutya-jump-hinted", "1");
+  }
+}
+
 /* ---------- input & jump mechanics ---------- */
 function doJump() {
   initAudio();
@@ -505,6 +524,7 @@ function doJump() {
     state = states.PLAY;
     overlay.classList.add("hidden");
     invuln = 36;
+    if (!hintShown) hintTimer = 120;
   }
   if (state === states.PAUSED) { togglePause(); return; }
   if (state !== states.PLAY) return;
@@ -968,6 +988,7 @@ function render() {
   drawParticles();
   drawDuck();
   drawPopups();
+  drawHint();
   drawHUD();
 
   if (state === states.PAUSED) {

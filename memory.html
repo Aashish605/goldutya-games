@@ -9,6 +9,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="memory.css">
   <link rel="stylesheet" href="leaderboard.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A6%86%3C/text%3E%3C/svg%3E" />
+  <meta property="og:title" content="Goldutya Memory — Match the Gold" />
+  <meta property="og:description" content="Flip cards, match pairs, beat your best. Memory gold on the TON ecosystem." />
+  <meta property="og:image" content="assets/card-memory.png" />
 </head>
 <body class="grid-bg">
   <div class="memory-container">
@@ -27,11 +31,6 @@
         <span class="stat-num" id="liveScore">0</span>
         <span class="stat-label">SCORE</span>
       </div>
-      <div class="difficulty-btns" id="diffBtns">
-        <button class="difficulty-btn active" data-diff="easy">EASY</button>
-        <button class="difficulty-btn" data-diff="medium">MED</button>
-        <button class="difficulty-btn" data-diff="hard">HARD</button>
-      </div>
       <div class="stat">
         <span class="stat-num" id="moves">0</span>
         <span class="stat-label">MOVES</span>
@@ -42,17 +41,22 @@
 
     <div class="overlay" id="overlay">
       <div class="overlay-content">
-        <img class="overlay-duck-img" src="assets/duck-mid.png" alt="Duck">
+        <img class="overlay-duck-img" src="assets/duck-mid.png" alt="Goldutya duck mascot" aria-hidden="true" />
         <h2 class="overlay-title" id="overlayTitle">GOLDUTYA MEMORY</h2>
+        <div class="difficulty-btns" id="diffBtns">
+          <button class="difficulty-btn active" data-diff="easy">EASY</button>
+          <button class="difficulty-btn" data-diff="medium">MED</button>
+          <button class="difficulty-btn" data-diff="hard">HARD</button>
+        </div>
         <p class="overlay-sub" id="overlaySub">Match pairs to win!</p>
         <button class="btn" id="startBtn">START</button>
         <button class="share-btn" id="shareBtn" style="display:none;">SHARE SCORE</button>
         <div id="leaderboard" class="lb-container"></div>
         <div class="skin-picker" id="skinPicker">
           <span class="skin-label">SKIN</span>
-          <button class="skin-opt active" data-skin="default">🦆</button>
-          <button class="skin-opt" data-skin="gold">🪙</button>
-          <button class="skin-opt" data-skin="crown">👑</button>
+          <button class="skin-opt active" data-skin="default" aria-label="Default skin">🦆</button>
+          <button class="skin-opt" data-skin="gold" aria-label="Gold skin">🪙</button>
+          <button class="skin-opt" data-skin="crown" aria-label="Crown skin">👑</button>
         </div>
         <p class="hint">Flip cards · Match pairs · Beat your best</p>
         <p class="hint" style="margin-top:8px"><a href="index.html" class="btn-back">🎮 ALL GAMES</a></p>

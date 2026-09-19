@@ -139,6 +139,8 @@ let scoreScale = 1, combo = 0, maxCombo = 0, pipeCount = 0;
 let nightPhase = 0, nightDir = 0, nightTimer = 0;
 let muteOn = false;
 let shareShown = false;
+let hintShown = localStorage.getItem("goldutya-fly-hinted") === "1";
+let hintTimer = 0;
 
 best = Number(localStorage.getItem("goldutya-fly-best") || 0);
 bestEl.textContent = best;
@@ -435,6 +437,7 @@ function flap() {
     state = states.PLAY;
     overlay.classList.add("hidden");
     invuln = 36;
+    if (!hintShown) hintTimer = 120;
   }
   if (state !== states.PLAY) return;
   duck.vy = FLAP_V;
@@ -609,6 +612,23 @@ function update() {
   if (invuln <= 0 && collides()) gameOver();
 }
 
+/* ---------- hint ---------- */
+function drawHint() {
+  if (hintShown || hintTimer <= 0) return;
+  hintTimer--;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, hintTimer / 30);
+  ctx.font = '700 ' + Math.round(H * 0.04) + 'px "Bebas Neue", sans-serif';
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("TAP TO FLAP", W / 2, H / 2);
+  ctx.restore();
+  if (hintTimer <= 0 && !hintShown) {
+    hintShown = true;
+    localStorage.setItem("goldutya-fly-hinted", "1");
+  }
+}
+
 /* ---------- HUD ---------- */
 function drawScore() {
   if (state === states.READY) return;
@@ -627,13 +647,6 @@ function drawScore() {
     ctx.fillStyle = GOLD2;
     ctx.fillText("COMBO x" + combo, W / 2, Math.max(72, H * 0.13) + size * 0.65);
   }
-  if (state === states.PLAY && playFrame < 120) {
-    ctx.font = "700 " + Math.round(size * 0.36) + 'px "Bebas Neue", sans-serif';
-    ctx.globalAlpha = Math.max(0, 1 - playFrame / 120);
-    ctx.fillStyle = "#fff";
-    ctx.fillText("TAP TO FLAP", W / 2, H * 0.55);
-    ctx.globalAlpha = 1;
-  }
   ctx.restore();
 }
 
@@ -648,6 +661,7 @@ function render() {
   drawGround();
   drawParticles();
   drawDuck();
+  drawHint();
   drawScore();
   ctx.restore();
 }

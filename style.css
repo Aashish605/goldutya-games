@@ -205,6 +205,13 @@ body {
   opacity: 0.85;
 }
 
+.hint a {
+  display: inline-block;
+  padding: 8px 6px;
+  min-height: 44px;
+  line-height: 44px;
+}
+
 .mini {
   font-size: 0.6rem;
   color: var(--muted);
@@ -233,11 +240,13 @@ body {
 }
 
 .share-btn {
-  min-width: 200px;
-  min-height: 52px;
-  font-size: 1.1rem;
+  min-width: 220px;
+  min-height: 56px;
+  font-size: 1.2rem;
+  letter-spacing: 3px;
   background: linear-gradient(135deg, var(--cyan), #7ae0ff);
-  margin-top: 4px;
+  margin-top: 8px;
+  box-shadow: 0 8px 24px rgba(86, 217, 255, 0.25);
 }
 
 .skin-picker {
@@ -279,7 +288,8 @@ body {
 
 .btn-back {
   display: inline-block;
-  padding: 10px 20px;
+  padding: 12px 24px;
+  min-height: 48px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid var(--line);
   border-radius: 10px;

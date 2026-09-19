@@ -133,6 +133,8 @@ let speedMult = 1;
 let nightPhase = 0, nightDir = 0, nightTimer = 0;
 let muteOn = false;
 let duckBob = 0, duckVy = 0;
+let hintShown = localStorage.getItem("goldutya-clicker-hinted") === "1";
+let hintTimer = 0;
 let deathCause = "timeout";
 let bombWarns = [];
 let paused = false;
@@ -520,6 +522,23 @@ function drawDuck() {
   ctx.restore();
 }
 
+/* ---------- hint ---------- */
+function drawHint() {
+  if (hintShown || hintTimer <= 0) return;
+  hintTimer--;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, hintTimer / 30);
+  ctx.font = '700 ' + Math.round(H * 0.04) + 'px "Bebas Neue", sans-serif';
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("TAP COINS \u00B7 DODGE BOMBS", W / 2, H / 2);
+  ctx.restore();
+  if (hintTimer <= 0 && !hintShown) {
+    hintShown = true;
+    localStorage.setItem("goldutya-clicker-hinted", "1");
+  }
+}
+
 /* ---------- tap handling ---------- */
 function handleTap(x, y) {
   if (state === states.OVER) return;
@@ -527,6 +546,7 @@ function handleTap(x, y) {
     state = states.PLAY;
     overlay.classList.add("hidden");
     invuln = 20;
+    if (!hintShown) hintTimer = 120;
     return;
   }
   if (state !== states.PLAY) return;
@@ -770,10 +790,10 @@ function drawTimer() {
   ctx.lineWidth = 1;
   ctx.strokeRect(barX, barY, barW, barH);
 
-  ctx.font = '700 16px "Bebas Neue", sans-serif';
+  ctx.font = '700 24px "Bebas Neue", sans-serif';
   ctx.textAlign = "center";
   ctx.fillStyle = timeLeft <= 10 ? RED : "#fff";
-  ctx.fillText(timeLeft + "s", W / 2, barY + barH + 18);
+  ctx.fillText(timeLeft + "s", W / 2, barY + barH + 24);
 }
 
 /* ---------- update ---------- */
@@ -967,6 +987,7 @@ function render() {
   drawPopups();
   drawUrgency();
   drawTimer();
+  drawHint();
   drawHUD();
 
   ctx.restore();

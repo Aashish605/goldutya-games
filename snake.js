@@ -30,6 +30,8 @@ let clouds = [];
 let audioCtx = null;
 let paused = false;
 let deathParticles = [];
+let hintShown = localStorage.getItem("goldutya-snake-hinted") === "1";
+let hintTimer = 0;
 const MILESTONES = [100, 250, 500, 1000];
 let lastMilestone = 0;
 
@@ -348,6 +350,7 @@ function draw() {
   ctx.fillRect(0, 0, W, H);
 
   drawClouds();
+  drawHint();
 
   ctx.strokeStyle = "rgba(255,255,255,0.04)";
   ctx.lineWidth = 1;
@@ -496,11 +499,29 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
+function drawHint() {
+  if (hintShown || hintTimer <= 0) return;
+  hintTimer--;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, hintTimer / 30);
+  ctx.font = '700 ' + Math.max(16, cellSize * 1.2) + 'px "Bebas Neue", sans-serif';
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("SWIPE TO TURN", W / 2, H / 2);
+  ctx.restore();
+  if (hintTimer <= 0 && !hintShown) {
+    hintShown = true;
+    localStorage.setItem("goldutya-snake-hinted", "1");
+  }
+}
+
 function startGame() {
   initAudio();
   resetAfterDeath();
   overlay.classList.add("hidden");
   state = "PLAY";
+  if (!hintShown) hintTimer = 120;
 }
 
 function shareGame() {

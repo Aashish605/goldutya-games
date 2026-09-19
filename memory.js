@@ -19,9 +19,10 @@ let moves = 0;
 let elapsed = 0;
   let gameStarted = false;
   let gameLocked = false;
-let muted = localStorage.getItem("goldutya-memory-mute") === "1";
-let currentSkin = "default";
+  let muted = localStorage.getItem("goldutya-memory-mute") === "1";
+  let currentSkin = "default";
   let audioCtx = null;
+  let hintShown = localStorage.getItem("goldutya-memory-hinted") === "1";
 
   /* ── DOM ── */
   const $ = (sel) => document.querySelector(sel);
@@ -195,6 +196,19 @@ let currentSkin = "default";
     });
   }
 
+  /* ── HINT ── */
+  function showHint() {
+    if (hintShown) return;
+    hintShown = true;
+    localStorage.setItem("goldutya-memory-hinted", "1");
+    const hintEl = document.createElement("div");
+    hintEl.textContent = "FLIP CARDS TO MATCH";
+    hintEl.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;font:700 5vw/1 'Bebas Neue',sans-serif;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.7);pointer-events:none;transition:opacity 0.6s;opacity:1;";
+    document.body.appendChild(hintEl);
+    setTimeout(() => { hintEl.style.opacity = "0"; }, 2000);
+    setTimeout(() => { hintEl.remove(); }, 2600);
+  }
+
   /* ── GAME LOGIC ── */
   function flipCard(card) {
     if (gameLocked) return;
@@ -211,6 +225,7 @@ let currentSkin = "default";
     if (!gameStarted) {
       gameStarted = true;
       startTimer();
+      showHint();
     }
 
     if (flippedCards.length === 2) {

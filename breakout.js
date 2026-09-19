@@ -32,6 +32,8 @@ let slowTimer = 0;
 let fireballTimer = 0;
 let magnetTimer = 0;
 let magnetRelease = false;
+let hintShown = localStorage.getItem("goldutya-breakout-hinted") === "1";
+let hintTimer = 0;
 
 /* --- canvas fit --- */
 function fitCanvas() {
@@ -293,6 +295,22 @@ function drawPopups() {
   ctx.restore();
 }
 
+function drawHint() {
+  if (hintShown || hintTimer <= 0) return;
+  hintTimer--;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, hintTimer / 30);
+  ctx.font = '700 ' + Math.round(H * 0.04) + 'px "Bebas Neue", sans-serif';
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("TAP TO LAUNCH", W / 2, H / 2);
+  ctx.restore();
+  if (hintTimer <= 0 && !hintShown) {
+    hintShown = true;
+    localStorage.setItem("goldutya-breakout-hinted", "1");
+  }
+}
+
 /* --- input --- */
 function onPointerMove(ex) {
   const rect = canvas.getBoundingClientRect();
@@ -304,7 +322,7 @@ canvas.addEventListener("pointerdown", (e) => {
   if (e.target.closest("button") || e.target.closest("#overlay")) return;
   initAudio();
   onPointerMove(e.clientX);
-  if (state === "ready") { state = "play"; overlay.classList.add("hidden"); return; }
+  if (state === "ready") { state = "play"; overlay.classList.add("hidden"); if (!hintShown) hintTimer = 120; return; }
   if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; return; }
   if (magnetTimer > 0) {
     for (const b of balls) {
@@ -323,7 +341,7 @@ canvas.addEventListener("pointerdown", (e) => {
     }
   }
 });
-document.addEventListener("keydown", (e) => { keysDown[e.code] = true; if (e.code === "Space" || e.code === "Enter" || e.code === "ArrowUp") { e.preventDefault(); initAudio(); if (state === "ready") { state = "play"; overlay.classList.add("hidden"); } if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; } if (magnetTimer > 0) { for (const b of balls) { if (b.attached) { b.attached = false; const spd = b.speed || 4; const hitPos = (b.x - paddle.x) / (paddle.w / 2); const angle = hitPos * 65 * Math.PI / 180; b.vx = Math.sin(angle) * spd; b.vy = -Math.cos(angle) * spd; const minVy = spd * 0.3; if (Math.abs(b.vy) < minVy) b.vy = -minVy; burst(b.x, b.y, "#FFDF59", 4); break; } } } } });
+document.addEventListener("keydown", (e) => { keysDown[e.code] = true; if (e.code === "Space" || e.code === "Enter" || e.code === "ArrowUp") { e.preventDefault(); initAudio(); if (state === "ready") { state = "play"; overlay.classList.add("hidden"); if (!hintShown) hintTimer = 120; } if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; } if (magnetTimer > 0) { for (const b of balls) { if (b.attached) { b.attached = false; const spd = b.speed || 4; const hitPos = (b.x - paddle.x) / (paddle.w / 2); const angle = hitPos * 65 * Math.PI / 180; b.vx = Math.sin(angle) * spd; b.vy = -Math.cos(angle) * spd; const minVy = spd * 0.3; if (Math.abs(b.vy) < minVy) b.vy = -minVy; burst(b.x, b.y, "#FFDF59", 4); break; } } } } });
 document.addEventListener("keyup", (e) => { keysDown[e.code] = false; });
 
 /* --- game logic update --- */
@@ -809,6 +827,7 @@ function render() {
   drawPaddle();
   drawParticles();
   drawPopups();
+  drawHint();
   drawHUD();
 
   ctx.restore();
@@ -841,11 +860,15 @@ best = Number(localStorage.getItem("goldutya-breakout-best") || 0);
 muteOn = localStorage.getItem("goldutya-breakout-mute") === "1";
 if (muteBtn) { muteBtn.textContent = muteOn ? "🔇" : "🔊"; muteBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(); }); }
 if (shareBtn) shareBtn.addEventListener("click", (e) => { e.stopPropagation(); shareScore(); });
-if (startBtn) startBtn.addEventListener("click", (e) => { e.stopPropagation(); initAudio(); if (state === "ready") { state = "play"; overlay.classList.add("hidden"); } if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; } });
+if (startBtn) startBtn.addEventListener("click", (e) => { e.stopPropagation(); initAudio(); if (state === "ready") { state = "play"; overlay.classList.add("hidden"); if (!hintShown) hintTimer = 120; } if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; } });
 
 resetGame();
 initClouds();
 requestAnimationFrame(loop);
 document.addEventListener("pointerdown", initAudio, { once: true });
-document.addEventListener("visibilitychange", () => { paused = document.hidden; });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && state === "play") {
+    paused = true;
+  }
+});
 updateSkinUI();
