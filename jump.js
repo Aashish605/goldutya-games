@@ -607,7 +607,7 @@ function gameOver() {
     localStorage.setItem("goldutya-jump-best", String(best));
     if (bestEl) bestEl.textContent = best;
   }
-  if (total > 0) { Leaderboard.addScore("jump", total, { coins: coinCount, combo: maxCombo }); setTimeout(() => Leaderboard.promptName(), 0); }
+  if (total > 0) { Leaderboard.addScore("jump", total, { coins: coinCount, combo: maxCombo }); }
 
   setTimeout(() => {
     if (state !== states.OVER) return;

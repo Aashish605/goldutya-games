@@ -491,7 +491,7 @@ function gameOver() {
     localStorage.setItem("goldutya-fly-best", String(best));
     bestEl.textContent = best;
   }
-  if (score > 0) { Leaderboard.addScore("fly", score, { combo: maxCombo }); setTimeout(() => Leaderboard.promptName(), 0); }
+  if (score > 0) { Leaderboard.addScore("fly", score, { combo: maxCombo }); }
   setTimeout(() => {
     if (state !== states.OVER) return;
     overlay.classList.remove("hidden");
