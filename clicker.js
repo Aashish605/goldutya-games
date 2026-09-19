@@ -703,7 +703,7 @@ function gameOver(cause) {
     beep(440, 0.3, "sine", 0.2, 880);
     scoreScale = 1.8;
   }
-  if (score > 0) Leaderboard.addScore("clicker", score, { combo: maxCombo, cause: deathCause });
+  if (score > 0) { Leaderboard.promptName(); Leaderboard.addScore("clicker", score, { combo: maxCombo, cause: deathCause }); }
   setTimeout(function() {
     if (state !== states.OVER) return;
     overlay.classList.remove("hidden");
@@ -1013,4 +1013,4 @@ if (muteBtn) {
   muteBtn.addEventListener("click", function(e) { e.stopPropagation(); toggleMute(); });
 }
 if (shareBtn) shareBtn.addEventListener("click", function(e) { e.stopPropagation(); shareScore(); });
-setTimeout(() => Leaderboard.promptName(), 500);
+

@@ -607,7 +607,7 @@ function gameOver() {
     localStorage.setItem("goldutya-jump-best", String(best));
     if (bestEl) bestEl.textContent = best;
   }
-  if (total > 0) Leaderboard.addScore("jump", total, { coins: coinCount, combo: maxCombo });
+  if (total > 0) { Leaderboard.promptName(); Leaderboard.addScore("jump", total, { coins: coinCount, combo: maxCombo }); }
 
   setTimeout(() => {
     if (state !== states.OVER) return;
@@ -1024,4 +1024,3 @@ if (muteBtn) {
   muteBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(); });
 }
 if (shareBtn) shareBtn.addEventListener("click", (e) => { e.stopPropagation(); shareScore(); });
-setTimeout(() => Leaderboard.promptName(), 500);

@@ -35,7 +35,7 @@ let hintTimer = 0;
 const MILESTONES = [100, 250, 500, 1000];
 let lastMilestone = 0;
 
-const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || ("ontouchstart" in window);
+let isMobile = false;
 let joyBaseX = 0, joyBaseY = 0, joyR = 50;
 let joyKnobX = 0, joyKnobY = 0;
 let joyActive = false, joyTouchId = null;
@@ -66,6 +66,7 @@ function resize() {
   rows = Math.floor(H / cellSize);
   offsetX = Math.floor((W - cols * cellSize) / 2);
   offsetY = Math.floor((H - rows * cellSize) / 2);
+  isMobile = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform)) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
   joyR = Math.max(36, Math.min(60, W * 0.08));
   joyBaseX = joyR + 28;
   joyBaseY = H - joyR - 28;
@@ -305,7 +306,7 @@ function gameOver() {
     const s = 1.5 + Math.random() * 5;
     deathParticles.push({ x: hx, y: hy, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 30 + Math.random() * 20, color: i % 2 === 0 ? GOLD : RED, r: 2 + Math.random() * 3 });
   }
-  if (score > 0) Leaderboard.addScore("snake", score, { speed: currentSpeed });
+  if (score > 0) { Leaderboard.promptName(); Leaderboard.addScore("snake", score, { speed: currentSpeed }); }
   overlayTitle.textContent = isNewBest ? "NEW BEST!" : "GAME OVER";
   overlaySub.textContent = "Score: " + score + " — " + (isNewBest ? "Amazing!" : "Best: " + bestScore);
   shareBtn.style.display = "inline-block";
@@ -514,13 +515,13 @@ function loop() {
 function drawJoystick() {
   if (!isMobile || state !== "PLAY") return;
   ctx.save();
-  ctx.globalAlpha = 0.15;
+  ctx.globalAlpha = 0.35;
   ctx.strokeStyle = "#fff";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.arc(joyBaseX, joyBaseY, joyR, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.globalAlpha = joyActive ? 0.35 : 0.18;
+  ctx.globalAlpha = joyActive ? 0.65 : 0.5;
   ctx.fillStyle = joyActive ? GOLD : "#fff";
   ctx.beginPath();
   ctx.arc(joyKnobX, joyKnobY, joyR * 0.4, 0, Math.PI * 2);
@@ -757,5 +758,5 @@ document.addEventListener("visibilitychange", () => {
   paused = document.hidden && state === "PLAY";
 });
 muteBtn.innerHTML = muted ? "&#128263;" : "&#128266;";
-setTimeout(() => Leaderboard.promptName(), 500);
+
 })();

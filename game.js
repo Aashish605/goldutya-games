@@ -491,7 +491,7 @@ function gameOver() {
     localStorage.setItem("goldutya-fly-best", String(best));
     bestEl.textContent = best;
   }
-  if (score > 0) Leaderboard.addScore("fly", score, { combo: maxCombo });
+  if (score > 0) { Leaderboard.promptName(); Leaderboard.addScore("fly", score, { combo: maxCombo }); }
   setTimeout(() => {
     if (state !== states.OVER) return;
     overlay.classList.remove("hidden");
@@ -679,4 +679,3 @@ if (muteBtn) muteBtn.textContent = muteOn ? "🔇" : "🔊";
 if (muteBtn) muteBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(); });
 const shareBtn = document.getElementById("shareBtn");
 if (shareBtn) shareBtn.addEventListener("click", (e) => { e.stopPropagation(); shareScore(); });
-setTimeout(() => Leaderboard.promptName(), 500);
