@@ -231,13 +231,9 @@ function update() {
 
   dir = { ...nextDir };
   const head = snake[0];
-  const nx = head.x + dir.x;
-  const ny = head.y + dir.y;
+  const nx = ((head.x + dir.x) % cols + cols) % cols;
+  const ny = ((head.y + dir.y) % rows + rows) % rows;
 
-  if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) {
-    gameOver();
-    return;
-  }
   for (let i = 0; i < snake.length; i++) {
     if (snake[i].x === nx && snake[i].y === ny) {
       gameOver();
