@@ -34,9 +34,8 @@ body {
 }
 
 .grid-bg {
-  background-image:
-    linear-gradient(rgba(22, 140, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(22, 140, 255, 0.06) 1px, transparent 1px);
+  background-color: #0c1015;
+  background-image: url('assets/bg-pattern.svg');
   background-size: 40px 40px;
 }
 
@@ -305,4 +304,53 @@ body {
 .btn-back:hover {
   background: rgba(245, 197, 24, 0.12);
   border-color: var(--gold);
+}
+
+/* ── DIFFICULTY SELECTOR ── */
+.difficulty-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  margin: 6px 0;
+}
+
+.diff-label {
+  font-family: "Space Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 1.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.difficulty-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.difficulty-btn {
+  font-family: "Space Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(11, 11, 13, 0.6);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 36px;
+}
+
+.difficulty-btn:hover {
+  border-color: var(--gold);
+  color: #fff;
+  background: rgba(245, 197, 24, 0.12);
+}
+
+.difficulty-btn.active {
+  background: var(--gold);
+  color: var(--dark);
+  border-color: var(--gold);
+  font-weight: bold;
 }

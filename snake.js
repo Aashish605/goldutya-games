@@ -18,10 +18,11 @@ const bestScoreEl = document.getElementById("bestScore");
 const muteBtn = document.getElementById("muteBtn");
 const skinPicker = document.getElementById("skinPicker");
 const hint = document.getElementById("hint");
+const diffPicker = document.getElementById("diffPicker");
 
 let W, H, dpr;
 let cellSize, cols, rows, offsetX, offsetY;
-let snake, dir, nextDir, food, powerFood, score, bestScore, frameCount;
+let snake, prevSnake, dir, nextDir, food, powerFood, obstacles = [], score, bestScore, frameCount;
 let interval, speedBoost, speedBoostFrames, foodEaten, state;
 let muted = localStorage.getItem("goldutya-snake-mute") === "1", skin = "default";
 let shakeX = 0, shakeY = 0, shakeFrames = 0;
@@ -35,11 +36,15 @@ let hintTimer = 0;
 const MILESTONES = [100, 250, 500, 1000];
 let lastMilestone = 0;
 
+let eatPopTimer = 0;
+let moveStepProgress = 1;
+let currentInterval = 8;
+let deathSlowMo = 0;
+
 let isMobile = false;
 let joyBaseX = 0, joyBaseY = 0, joyR = 50;
 let joyKnobX = 0, joyKnobY = 0;
 let joyActive = false, joyTouchId = null;
-let joyDirX = 0, joyDirY = 0;
 
 const duckImgs = {};
 let duckImgsLoaded = 0;
@@ -72,6 +77,16 @@ function resize() {
   joyBaseY = H - joyR - 160;
   joyKnobX = joyBaseX;
   joyKnobY = joyBaseY;
+}
+
+function getDiffConfig() {
+  const diff = typeof Difficulty !== "undefined" ? Difficulty.getDiff("snake") : "medium";
+  if (diff === "easy") {
+    return { baseInterval: 9, wrap: true, obstacleCount: 0 };
+  } else if (diff === "hard") {
+    return { baseInterval: 3.5, wrap: false, obstacleCount: 6 };
+  }
+  return { baseInterval: 6, wrap: false, obstacleCount: 0 };
 }
 
 function initClouds() {
@@ -143,13 +158,32 @@ function saveBest() {
 }
 
 function randomGridPos() {
-  let x, y, onSnake;
+  let x, y, invalid;
   do {
     x = Math.floor(Math.random() * cols);
     y = Math.floor(Math.random() * rows);
-    onSnake = snake.some(s => s.x === x && s.y === y);
-  } while (onSnake);
+    const onSnake = snake ? snake.some(s => s.x === x && s.y === y) : false;
+    const onObstacle = obstacles ? obstacles.some(o => o.x === x && o.y === y) : false;
+    invalid = onSnake || onObstacle;
+  } while (invalid);
   return { x, y };
+}
+
+function placeObstacles(count) {
+  obstacles = [];
+  const cx = Math.floor(cols / 2);
+  const cy = Math.floor(rows / 2);
+  for (let i = 0; i < count; i++) {
+    let ox, oy, invalid;
+    do {
+      ox = Math.floor(Math.random() * cols);
+      oy = Math.floor(Math.random() * rows);
+      const isStartArea = Math.abs(ox - cx) <= 3 && Math.abs(oy - cy) <= 3;
+      const onObstacle = obstacles.some(o => o.x === ox && o.y === oy);
+      invalid = isStartArea || onObstacle;
+    } while (invalid);
+    obstacles.push({ x: ox, y: oy });
+  }
 }
 
 function placeFood() {
@@ -166,6 +200,7 @@ function placeFood() {
 
 function initGame() {
   resize();
+  const cfg = getDiffConfig();
   const cx = Math.floor(cols / 2);
   const cy = Math.floor(rows / 2);
   snake = [
@@ -173,22 +208,28 @@ function initGame() {
     { x: cx - 1, y: cy },
     { x: cx - 2, y: cy }
   ];
+  prevSnake = snake.map(s => ({ ...s }));
   dir = { x: 1, y: 0 };
   nextDir = { x: 1, y: 0 };
   score = 0;
   frameCount = 0;
-  interval = 8;
+  interval = cfg.baseInterval;
   speedBoost = false;
   speedBoostFrames = 0;
   foodEaten = 0;
   nightMode = false;
   nightCounter = 0;
   shakeFrames = 0;
+  eatPopTimer = 0;
+  moveStepProgress = 1;
+  deathSlowMo = 0;
   state = "READY";
+  placeObstacles(cfg.obstacleCount);
   placeFood();
 }
 
 function resetAfterDeath() {
+  const cfg = getDiffConfig();
   const cx = Math.floor(cols / 2);
   const cy = Math.floor(rows / 2);
   snake = [
@@ -196,11 +237,12 @@ function resetAfterDeath() {
     { x: cx - 1, y: cy },
     { x: cx - 2, y: cy }
   ];
+  prevSnake = snake.map(s => ({ ...s }));
   dir = { x: 1, y: 0 };
   nextDir = { x: 1, y: 0 };
   score = 0;
   frameCount = 0;
-  interval = 8;
+  interval = cfg.baseInterval;
   speedBoost = false;
   speedBoostFrames = 0;
   foodEaten = 0;
@@ -209,6 +251,10 @@ function resetAfterDeath() {
   shakeFrames = 0;
   deathParticles = [];
   lastMilestone = 0;
+  eatPopTimer = 0;
+  moveStepProgress = 1;
+  deathSlowMo = 0;
+  placeObstacles(cfg.obstacleCount);
   placeFood();
 }
 
@@ -221,18 +267,43 @@ function update() {
   if (state !== "PLAY") return;
   frameCount++;
 
+  if (eatPopTimer > 0) eatPopTimer--;
+
   if (speedBoost) {
     speedBoostFrames--;
     if (speedBoostFrames <= 0) speedBoost = false;
   }
 
-  const currentInterval = speedBoost ? 2 : interval;
-  if (frameCount % currentInterval !== 0) return;
+  const cfg = getDiffConfig();
+  currentInterval = speedBoost ? Math.max(2, Math.floor(cfg.baseInterval * 0.4)) : cfg.baseInterval;
 
+  moveStepProgress = Math.min(1, (frameCount % currentInterval) / currentInterval);
+
+  if (frameCount % Math.max(1, Math.floor(currentInterval)) !== 0) return;
+
+  moveStepProgress = 0;
+  prevSnake = snake.map(s => ({ ...s }));
   dir = { ...nextDir };
   const head = snake[0];
-  const nx = ((head.x + dir.x) % cols + cols) % cols;
-  const ny = ((head.y + dir.y) % rows + rows) % rows;
+  let nx = head.x + dir.x;
+  let ny = head.y + dir.y;
+
+  if (cfg.wrap) {
+    nx = (nx % cols + cols) % cols;
+    ny = (ny % rows + rows) % rows;
+  } else {
+    if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) {
+      gameOver();
+      return;
+    }
+  }
+
+  for (let o of obstacles) {
+    if (o.x === nx && o.y === ny) {
+      gameOver();
+      return;
+    }
+  }
 
   for (let i = 0; i < snake.length; i++) {
     if (snake[i].x === nx && snake[i].y === ny) {
@@ -248,14 +319,12 @@ function update() {
     score += 10;
     foodEaten++;
     ate = true;
+    eatPopTimer = 10;
     sfxEat();
     nightCounter++;
     if (nightCounter >= 15) {
       nightMode = !nightMode;
       nightCounter = 0;
-    }
-    if (foodEaten % 5 === 0 && interval > 3) {
-      interval--;
     }
     for (let mi = 0; mi < MILESTONES.length; mi++) {
       if (score >= MILESTONES[mi] && lastMilestone <= mi) {
@@ -268,6 +337,7 @@ function update() {
   } else if (powerFood && nx === powerFood.x && ny === powerFood.y) {
     score += 50;
     ate = true;
+    eatPopTimer = 12;
     sfxPower();
     speedBoost = true;
     speedBoostFrames = 180;
@@ -295,22 +365,35 @@ function gameOver() {
   TG.haptic("heavy");
   shakeFrames = 18;
   deathParticles = [];
+  deathSlowMo = 12;
+
   const hx = offsetX + snake[0].x * cellSize + cellSize / 2;
   const hy = offsetY + snake[0].y * cellSize + cellSize / 2;
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 24; i++) {
     const a = Math.random() * Math.PI * 2;
-    const s = 1.5 + Math.random() * 5;
-    deathParticles.push({ x: hx, y: hy, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 30 + Math.random() * 20, color: i % 2 === 0 ? GOLD : RED, r: 2 + Math.random() * 3 });
+    const s = 2.0 + Math.random() * 6;
+    deathParticles.push({
+      x: hx, y: hy,
+      vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+      life: 30 + Math.random() * 25,
+      color: i % 3 === 0 ? GOLD : i % 3 === 1 ? RED : CYAN,
+      r: 2.5 + Math.random() * 3.5
+    });
   }
+
   if (score > 0) { Leaderboard.addScore("snake", score, { speed: interval }); }
   overlayTitle.textContent = isNewBest ? "NEW BEST!" : "GAME OVER";
   overlaySub.textContent = "Score: " + score + " — " + (isNewBest ? "Amazing!" : "Best: " + bestScore);
   shareBtn.style.display = "inline-block";
   startBtn.textContent = "RETRY";
   hint.textContent = "Tap to try again!";
-  overlay.classList.remove("hidden");
-  const lbContainer = document.getElementById("leaderboard");
-  if (lbContainer) Leaderboard.renderBoard(lbContainer, "snake", score);
+  
+  setTimeout(() => {
+    overlay.classList.remove("hidden");
+    const lbContainer = document.getElementById("leaderboard");
+    if (lbContainer) Leaderboard.renderBoard(lbContainer, "snake", score);
+  }, 300);
+
   if (isNewBest) {
     sfxPower();
   }
@@ -360,7 +443,8 @@ function draw() {
   drawClouds();
   drawHint();
 
-  ctx.strokeStyle = "rgba(255,255,255,0.04)";
+  // Grid background lines
+  ctx.strokeStyle = "rgba(255,255,255,0.03)";
   ctx.lineWidth = 1;
   for (let c = 0; c <= cols; c++) {
     ctx.beginPath();
@@ -375,31 +459,84 @@ function draw() {
     ctx.stroke();
   }
 
-  const nightMod = nightMode ? 0.55 : 1;
-  const pad = Math.max(1, cellSize * 0.08);
-  const radius = Math.max(2, cellSize * 0.22);
+  // Draw obstacles
+  for (const o of obstacles) {
+    const ox = offsetX + o.x * cellSize + 2;
+    const oy = offsetY + o.y * cellSize + 2;
+    const sz = cellSize - 4;
+    ctx.fillStyle = "#161B22";
+    ctx.strokeStyle = RED;
+    ctx.lineWidth = 1.5;
+    drawRoundedRect(ox, oy, sz, sz, 4);
+    ctx.fill(); ctx.stroke();
 
+    ctx.strokeStyle = "rgba(212,43,43,0.6)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ox + 4, oy + 4); ctx.lineTo(ox + sz - 4, oy + sz - 4);
+    ctx.moveTo(ox + sz - 4, oy + 4); ctx.lineTo(ox + 4, oy + sz - 4);
+    ctx.stroke();
+  }
+
+  const nightMod = nightMode ? 0.55 : 1;
+  const progress = Math.min(1, Math.max(0, moveStepProgress));
+
+  // Render snake body (tail to segment 1) with LERP + tapering
   for (let i = snake.length - 1; i >= 1; i--) {
-    const s = snake[i];
-    const px = offsetX + s.x * cellSize + pad;
-    const py = offsetY + s.y * cellSize + pad;
-    const pw = cellSize - pad * 2;
-    const ph = cellSize - pad * 2;
-    const t = i / snake.length;
+    const curr = snake[i];
+    const prev = prevSnake[i] || curr;
+
+    let gx = curr.x;
+    let gy = curr.y;
+
+    if (Math.abs(curr.x - prev.x) <= 1 && Math.abs(curr.y - prev.y) <= 1) {
+      gx = prev.x + (curr.x - prev.x) * progress;
+      gy = prev.y + (curr.y - prev.y) * progress;
+    }
+
+    const t = i / snake.length; // 0 at head, 1 at tail
+    const taper = Math.max(0.4, 1 - t * 0.5); // taper width down to 40% at tail
+    const pad = Math.max(1, cellSize * 0.1 * (1 / taper));
+    const pw = Math.max(4, (cellSize - pad * 2) * taper);
+    const ph = Math.max(4, (cellSize - pad * 2) * taper);
+    const px = offsetX + gx * cellSize + (cellSize - pw) / 2;
+    const py = offsetY + gy * cellSize + (cellSize - ph) / 2;
+    const radius = Math.max(2, pw * 0.3);
+
     const g = ctx.createLinearGradient(px, py, px + pw, py + ph);
     g.addColorStop(0, GOLD);
     g.addColorStop(1, GOLD2);
-    ctx.globalAlpha = (1 - t * 0.5) * nightMod;
+    ctx.globalAlpha = (1 - t * 0.45) * nightMod;
     ctx.fillStyle = g;
     drawRoundedRect(px, py, pw, ph, radius);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 
+  // Render Snake Head with LERP + eat pop scale + Directional Eyes
   if (snake.length > 0) {
-    const h = snake[0];
-    const hp = offsetX + h.x * cellSize;
-    const hpp = offsetY + h.y * cellSize;
+    const currHead = snake[0];
+    const prevHead = prevSnake[0] || currHead;
+
+    let hgx = currHead.x;
+    let hgy = currHead.y;
+
+    if (Math.abs(currHead.x - prevHead.x) <= 1 && Math.abs(currHead.y - prevHead.y) <= 1) {
+      hgx = prevHead.x + (currHead.x - prevHead.x) * progress;
+      hgy = prevHead.y + (currHead.y - prevHead.y) * progress;
+    }
+
+    const eatScale = eatPopTimer > 0 ? 1 + Math.sin(eatPopTimer * 0.4) * 0.22 : 1;
+    const hp = offsetX + hgx * cellSize;
+    const hpp = offsetY + hgy * cellSize;
+    const centerPx = hp + cellSize / 2;
+    const centerPy = hpp + cellSize / 2;
+
+    ctx.save();
+    ctx.translate(centerPx, centerPy);
+    ctx.scale(eatScale, eatScale);
+    ctx.translate(-cellSize / 2, -cellSize / 2);
+
     const duckKey = dir.y < 0 ? "up" : dir.y > 0 ? "down" : "mid";
     const src = DUCK_SRC[duckKey];
     const img = duckImgs[duckKey];
@@ -407,27 +544,53 @@ function draw() {
 
     ctx.globalAlpha = nightMod;
     if (img && img.complete && img.naturalWidth > 0) {
-      ctx.drawImage(img, src.sx, src.sy, src.sw, src.sh, hp, hpp, cellSize, cellSize);
+      ctx.drawImage(img, src.sx, src.sy, src.sw, src.sh, 0, 0, cellSize, cellSize);
       if (tint) {
         ctx.globalCompositeOperation = "source-atop";
         ctx.fillStyle = tint;
         ctx.globalAlpha = 0.25 * nightMod;
-        ctx.fillRect(hp, hpp, cellSize, cellSize);
+        ctx.fillRect(0, 0, cellSize, cellSize);
         ctx.globalCompositeOperation = "source-over";
         ctx.globalAlpha = nightMod;
       }
     } else {
       ctx.fillStyle = GOLD;
-      drawRoundedRect(hp + pad, hpp + pad, cellSize - pad * 2, cellSize - pad * 2, radius);
+      drawRoundedRect(2, 2, cellSize - 4, cellSize - 4, 6);
       ctx.fill();
     }
+
+    // Directional Eyes
+    const eyeR = Math.max(2.5, cellSize * 0.12);
+    const pupilR = eyeR * 0.5;
+    const exOffset = dir.x * (cellSize * 0.18);
+    const eyOffset = dir.y * (cellSize * 0.18);
+
+    // Eye 1
+    const e1x = cellSize * 0.35 + exOffset;
+    const e1y = cellSize * 0.35 + eyOffset;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath(); ctx.arc(e1x, e1y, eyeR, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#0B0B0D";
+    ctx.beginPath(); ctx.arc(e1x + dir.x * 1.2, e1y + dir.y * 1.2, pupilR, 0, Math.PI * 2); ctx.fill();
+
+    // Eye 2
+    const e2x = cellSize * 0.65 + exOffset;
+    const e2y = cellSize * 0.35 + eyOffset;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath(); ctx.arc(e2x, e2y, eyeR, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#0B0B0D";
+    ctx.beginPath(); ctx.arc(e2x + dir.x * 1.2, e2y + dir.y * 1.2, pupilR, 0, Math.PI * 2); ctx.fill();
+
+    ctx.restore();
     ctx.globalAlpha = 1;
   }
 
+  // Draw regular food
   if (food) {
     const fx = offsetX + food.x * cellSize + cellSize / 2;
     const fy = offsetY + food.y * cellSize + cellSize / 2;
-    const fr = cellSize * 0.35;
+    const pulse = 1 + Math.sin(frameCount * 0.12) * 0.08;
+    const fr = cellSize * 0.35 * pulse;
     ctx.fillStyle = GOLD;
     ctx.beginPath();
     ctx.arc(fx, fy, fr, 0, Math.PI * 2);
@@ -436,9 +599,10 @@ function draw() {
     ctx.font = `bold ${Math.max(8, cellSize * 0.3)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText("\u2726", fx, fy - 1);
+    ctx.fillText("✦", fx, fy - 1);
   }
 
+  // Draw power food
   if (powerFood) {
     const px = offsetX + powerFood.x * cellSize + cellSize / 2;
     const py = offsetY + powerFood.y * cellSize + cellSize / 2;
@@ -607,7 +771,6 @@ function joyUpdate(cx, cy) {
     joyKnobY = cy * dpr;
   }
   if (dist > joyR * 0.25) {
-    const angle = Math.atan2(dy, dx);
     if (Math.abs(dx) > Math.abs(dy)) {
       setDir(dx > 0 ? 1 : -1, 0);
     } else {
@@ -759,5 +922,9 @@ document.addEventListener("visibilitychange", () => {
   paused = document.hidden && state === "PLAY";
 });
 muteBtn.innerHTML = muted ? "&#128263;" : "&#128266;";
+
+if (typeof Difficulty !== "undefined") {
+  Difficulty.renderPicker(diffPicker, "snake", () => resetAfterDeath());
+}
 
 })();

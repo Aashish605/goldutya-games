@@ -54,7 +54,10 @@ function fitCanvas() {
     GRAVITY = H * 0.0014;
     JUMP_V = -H * 0.027;
   }
-  SPEED0 = Math.max(4.0, W * 0.010);
+  const diff = typeof Difficulty !== "undefined" ? Difficulty.getDiff("jump") : "medium";
+  const diffSpeedMult = diff === "easy" ? 0.8 : diff === "hard" ? 1.25 : 1.0;
+
+  SPEED0 = Math.max(3.2, W * 0.010 * diffSpeedMult);
   MAX_SPEED = SPEED0 * 2.16;
 
   OB_W = Math.max(42, Math.min(68, W * 0.13));
@@ -247,7 +250,8 @@ function reset() {
   coinCount = 0;
   frame = 0;
   speed = SPEED0;
-  invuln = 40;
+  const diff = typeof Difficulty !== "undefined" ? Difficulty.getDiff("jump") : "medium";
+  invuln = diff === "easy" ? 65 : diff === "hard" ? 20 : 40;
   shakeX = 0; shakeY = 0; shakeDur = 0; deathFlash = 0;
   scoreScale = 1;
   combo = 0; maxCombo = 0;
@@ -1022,5 +1026,8 @@ updateSkinUI();
 if (muteBtn) {
   muteBtn.textContent = muteOn ? "🔇" : "🔊";
   muteBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(); });
+}
+if (typeof Difficulty !== "undefined") {
+  Difficulty.renderPicker(document.getElementById("diffPicker"), "jump", () => reset());
 }
 if (shareBtn) shareBtn.addEventListener("click", (e) => { e.stopPropagation(); shareScore(); });

@@ -24,9 +24,8 @@ body {
 }
 
 .grid-bg {
-  background-image:
-    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-color: #0c1015;
+  background-image: url('assets/bg-pattern.svg');
   background-size: 40px 40px;
 }
 

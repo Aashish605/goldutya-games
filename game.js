@@ -37,16 +37,21 @@ function fitCanvas() {
   W = cssW;
   H = cssH;
   IS_MOBILE = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform)) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
+  const diff = typeof Difficulty !== "undefined" ? Difficulty.getDiff("fly") : "medium";
+  const diffSpeedMult = diff === "easy" ? 0.8 : diff === "hard" ? 1.2 : 1.0;
+  const diffGapAdd = diff === "easy" ? 35 : diff === "hard" ? -25 : 0;
+  const diffGravMult = diff === "easy" ? 0.85 : diff === "hard" ? 1.15 : 1.0;
+
   GROUND_H = Math.max(64, Math.round(H * 0.13));
   PIPE_W = Math.max(58, Math.min(90, Math.round(W * 0.18)));
-  PIPE_GAP = Math.max(200, Math.min(320, Math.round(H * 0.32)));
-  PIPE_SPEED = Math.max(2.2, Math.min(3.8, W * 0.006));
+  PIPE_GAP = Math.max(170, Math.min(350, Math.round(H * 0.32) + diffGapAdd));
+  PIPE_SPEED = Math.max(1.8, Math.min(4.8, (W * 0.006) * diffSpeedMult));
   PIPE_SPACING = Math.max(260, Math.round(W * 0.78));
   if (IS_MOBILE) {
-    GRAVITY = H * 0.00075;
+    GRAVITY = H * 0.00075 * diffGravMult;
     FLAP_V = -H * 0.022;
   } else {
-    GRAVITY = H * 0.001;
+    GRAVITY = H * 0.001 * diffGravMult;
     FLAP_V = -H * 0.022;
   }
   DUCK_W = Math.max(48, Math.min(72, Math.min(W, H) * 0.12));
@@ -679,3 +684,6 @@ if (muteBtn) muteBtn.textContent = muteOn ? "🔇" : "🔊";
 if (muteBtn) muteBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(); });
 const shareBtn = document.getElementById("shareBtn");
 if (shareBtn) shareBtn.addEventListener("click", (e) => { e.stopPropagation(); shareScore(); });
+if (typeof Difficulty !== "undefined") {
+  Difficulty.renderPicker(document.getElementById("diffPicker"), "fly", () => { fitCanvas(); reset(); });
+}

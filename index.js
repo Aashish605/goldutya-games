@@ -16,6 +16,7 @@ function renderCards(filterCat = "all") {
     if (filterCat !== "all" && g.cat !== filterCat) continue;
 
     const best = Number(localStorage.getItem(g.bestKey) || 0);
+    const diff = typeof Difficulty !== "undefined" ? Difficulty.getDiff(g.id).toUpperCase() : "MED";
     const card = document.createElement("a");
     card.className = "game-card";
     card.href = g.file;
@@ -33,7 +34,7 @@ function renderCards(filterCat = "all") {
           '<span class="card-cat cat-' + g.cat + '">' + g.catLabel + '</span>' +
         '</div>' +
         '<div class="card-footer">' +
-          '<div class="card-best">🏆 BEST <b>' + (best > 0 ? best : '--') + '</b></div>' +
+          '<div class="card-best">🏆 BEST <b>' + (best > 0 ? best : '--') + '</b> <span class="card-diff-chip">' + diff + '</span></div>' +
           '<span class="card-arrow">▶</span>' +
         '</div>' +
       '</div>';

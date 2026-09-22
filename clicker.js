@@ -43,12 +43,15 @@ function fitCanvas() {
   SHIELD_R = Math.max(13, Math.min(22, Math.min(W, H) * 0.028));
   DUCK_W = Math.max(48, Math.min(72, Math.min(W, H) * 0.12));
   DUCK_H = DUCK_W * 0.83;
+  const diff = typeof Difficulty !== "undefined" ? Difficulty.getDiff("clicker") : "medium";
+  const diffSpeedMult = diff === "easy" ? 0.85 : diff === "hard" ? 1.3 : 1.0;
+
   if (IS_MOBILE) {
-    BASE_SPEED = Math.max(1.8, Math.min(3.0, H * 0.0025));
+    BASE_SPEED = Math.max(1.5, Math.min(3.6, H * 0.0025 * diffSpeedMult));
   } else {
-    BASE_SPEED = Math.max(2.0, Math.min(3.5, H * 0.003));
+    BASE_SPEED = Math.max(1.7, Math.min(4.2, H * 0.003 * diffSpeedMult));
   }
-  BASE_SPAWN = Math.max(35, Math.min(65, Math.round(W * 0.14)));
+  BASE_SPAWN = Math.max(25, Math.min(70, Math.round(W * 0.14 / (diff === "hard" ? 1.2 : diff === "easy" ? 0.85 : 1))));
 }
 
 if (typeof ResizeObserver !== "undefined") {
@@ -247,11 +250,12 @@ function reset() {
   shakeX = 0; shakeY = 0; shakeDur = 0; deathFlash = 0;
   scoreScale = 1;
   combo = 0; maxCombo = 0;
-  shieldTimer = 0;
+  const diff = typeof Difficulty !== "undefined" ? Difficulty.getDiff("clicker") : "medium";
+  shieldTimer = diff === "easy" ? 300 : 0;
   itemsCollected = 0;
   bombTimer = 0;
   bombWarns = [];
-  shieldTimerSpawn = 10 * 60 + Math.random() * 3 * 60;
+  shieldTimerSpawn = diff === "hard" ? 999999 : (10 * 60 + Math.random() * 3 * 60);
   timeLeft = 60;
   lastTimeTick = 0;
   speedMult = 1;
@@ -1008,6 +1012,9 @@ function loop() {
 requestAnimationFrame(loop);
 document.addEventListener("pointerdown", initAudio, { once: true });
 updateSkinUI();
+if (typeof Difficulty !== "undefined") {
+  Difficulty.renderPicker(document.getElementById("diffPicker"), "clicker", () => reset());
+}
 if (muteBtn) {
   muteBtn.textContent = muteOn ? "\u{1F507}" : "\u{1F50A}";
   muteBtn.addEventListener("click", function(e) { e.stopPropagation(); toggleMute(); });

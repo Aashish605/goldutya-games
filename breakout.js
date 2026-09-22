@@ -160,8 +160,10 @@ function initClouds() {
 
 /* --- level config --- */
 function levelConfig(lv) {
+  const diff = typeof Difficulty !== "undefined" ? Difficulty.getDiff("breakout") : "medium";
+  const diffMult = diff === "easy" ? 0.82 : diff === "hard" ? 1.25 : 1.0;
   const capped = Math.min(lv, 5);
-  const baseSpeed = 3.5 + capped * 0.5;
+  const baseSpeed = (3.5 + capped * 0.5) * diffMult;
   const twoHitRows = capped === 1 ? 0 : Math.min(capped - 1, 4);
   return { baseSpeed, twoHitRows, cols: 8, rows: 5 };
 }
@@ -199,7 +201,8 @@ function buildBricks(lv) {
 /* --- reset --- */
 function resetGame() {
   fitCanvas();
-  score = 0; lives = 3; level = 1; frame = 0;
+  const diff = typeof Difficulty !== "undefined" ? Difficulty.getDiff("breakout") : "medium";
+  score = 0; lives = diff === "easy" ? 4 : diff === "hard" ? 2 : 3; level = 1; frame = 0;
   levelClearBonus = 0;
   lastMilestone = 0;
   slowTimer = 0;
@@ -877,3 +880,6 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 updateSkinUI();
+if (typeof Difficulty !== "undefined") {
+  Difficulty.renderPicker(document.getElementById("diffPicker"), "breakout", () => resetGame());
+}

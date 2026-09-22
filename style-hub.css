@@ -24,9 +24,8 @@ body {
 }
 
 .grid-bg {
-  background-image:
-    linear-gradient(rgba(22, 140, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(22, 140, 255, 0.06) 1px, transparent 1px);
+  background-color: #0c1015;
+  background-image: url('assets/bg-pattern.svg');
   background-size: 40px 40px;
 }
 
@@ -306,6 +305,18 @@ body {
   font-family: "Bebas Neue", sans-serif;
   font-size: 1.05rem;
   letter-spacing: 1px;
+}
+
+.card-diff-chip {
+  font-size: 0.55rem;
+  font-family: "Space Mono", monospace;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 197, 24, 0.3);
+  color: var(--gold);
+  background: rgba(245, 197, 24, 0.08);
+  margin-left: 6px;
 }
 
 .card-arrow {

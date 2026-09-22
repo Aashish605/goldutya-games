@@ -11,7 +11,7 @@
   };
 
   /* ── STATE ── */
-  let currentDiff = "easy";
+  let currentDiff = typeof Difficulty !== "undefined" ? Difficulty.getDiff("memory") : "easy";
   let cards = [];
   let flippedCards = [];
   let matchedPairs = 0;
@@ -382,6 +382,7 @@ let elapsed = 0;
     diffBtns.querySelectorAll(".difficulty-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     currentDiff = btn.dataset.diff;
+    if (typeof Difficulty !== "undefined") Difficulty.setDiff("memory", currentDiff);
     resetGame();
   });
 
