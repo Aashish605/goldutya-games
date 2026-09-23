@@ -34,8 +34,8 @@ function renderCards(filterCat = "all") {
           '<span class="card-cat cat-' + g.cat + '">' + g.catLabel + '</span>' +
         '</div>' +
         '<div class="card-footer">' +
-          '<div class="card-best">🏆 BEST <b>' + (best > 0 ? best : '--') + '</b> <span class="card-diff-chip">' + diff + '</span></div>' +
-          '<span class="card-arrow">▶</span>' +
+          '<div class="card-best"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#trophy"/></svg> BEST <b>' + (best > 0 ? best : '--') + '</b> <span class="card-diff-chip">' + diff + '</span></div>' +
+          '<span class="card-arrow"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg></span>' +
         '</div>' +
       '</div>';
     grid.appendChild(card);

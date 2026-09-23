@@ -192,7 +192,7 @@ function shareScore() {
 function toggleMute() {
   muteOn = !muteOn;
   localStorage.setItem("goldutya-clicker-mute", muteOn ? "1" : "0");
-  if (muteBtn) muteBtn.textContent = muteOn ? "\u{1F507}" : "\u{1F50A}";
+  if (muteBtn) muteBtn.textContent = muteOn ? "'<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>'" : "'<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>'";
 }
 
 /* ---------- popups ---------- */
@@ -1016,7 +1016,7 @@ if (typeof Difficulty !== "undefined") {
   Difficulty.renderPicker(document.getElementById("diffPicker"), "clicker", () => reset());
 }
 if (muteBtn) {
-  muteBtn.textContent = muteOn ? "\u{1F507}" : "\u{1F50A}";
+  muteBtn.textContent = muteOn ? "'<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>'" : "'<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>'";
   muteBtn.addEventListener("click", function(e) { e.stopPropagation(); toggleMute(); });
 }
 if (shareBtn) shareBtn.addEventListener("click", function(e) { e.stopPropagation(); shareScore(); });

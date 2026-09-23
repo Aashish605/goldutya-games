@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="ui-tokens.css" />
   <link rel="stylesheet" href="clicker.css" />
   <link rel="stylesheet" href="difficulty.css" />
   <link rel="stylesheet" href="leaderboard.css" />
@@ -22,7 +23,7 @@
     <canvas id="game"></canvas>
 
     <header class="topbar">
-      <button id="muteBtn" class="mute-btn" aria-label="Toggle sound">🔊</button>
+      <button id="muteBtn" class="mute-btn" aria-label="Toggle sound"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg></button>
       <h1 class="title">GOLDUTYA <span>CLICKER</span></h1>
       <div class="bestscore">BEST <b id="best">0</b></div>
     </header>
@@ -38,13 +39,13 @@
       <div id="skinPicker" class="skin-picker"></div>
       <p class="hint">tap / click on falling items</p>
       <p class="mini">Play-to-earn on the TON ecosystem</p>
-      <p class="hint" style="margin-top:8px"><a href="index.html" class="btn-back">🎮 ALL GAMES</a></p>
+      <p class="hint" style="margin-top:8px"><a href="index.html" class="btn-back"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#gamepad"/></svg> ALL GAMES</a></p>
       <p class="hint" style="margin-top:6px">
-        <a href="fly.html" style="color:var(--gold)">▶ FLY</a> ·
-        <a href="jump.html" style="color:var(--cyan)">▶ JUMP</a> ·
-        <a href="snake.html" style="color:#4CAF50">▶ SNAKE</a> ·
-        <a href="memory.html" style="color:#9C27B0">▶ MEMORY</a> ·
-        <a href="breakout.html" style="color:#FF9800">▶ BREAKOUT</a>
+        <a href="fly.html" style="color:var(--gold)"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> FLY</a> ·
+        <a href="jump.html" style="color:var(--cyan)"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> JUMP</a> ·
+        <a href="snake.html" style="color:#4CAF50"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> SNAKE</a> ·
+        <a href="memory.html" style="color:#9C27B0"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> MEMORY</a> ·
+        <a href="breakout.html" style="color:#FF9800"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> BREAKOUT</a>
       </p>
     </div>
   </div>

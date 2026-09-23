@@ -1,0 +1,21 @@
+:root {
+  --font-head: 'Bebas Neue', sans-serif;
+  --font-body: 'Space Mono', monospace;
+}
+
+body, button, a, div, h1, h2, h3, h4, h5, h6, p, span, td, th {
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4, h5, h6, .overlay-title, .card-name, .btn {
+  font-family: var(--font-head) !important;
+}
+
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: middle;
+  fill: currentColor;
+  line-height: 1;
+}

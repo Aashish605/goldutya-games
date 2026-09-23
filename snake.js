@@ -861,7 +861,7 @@ muteBtn.addEventListener("click", (e) => {
   muted = !muted;
   localStorage.setItem("goldutya-snake-mute", muted ? "1" : "0");
   muteBtn.classList.toggle("muted", muted);
-  muteBtn.innerHTML = muted ? "&#128263;" : "&#128266;";
+  muteBtn.innerHTML = muted ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
 });
 
 skinPicker.addEventListener("click", (e) => {
@@ -921,7 +921,7 @@ requestAnimationFrame(loop);
 document.addEventListener("visibilitychange", () => {
   paused = document.hidden && state === "PLAY";
 });
-muteBtn.innerHTML = muted ? "&#128263;" : "&#128266;";
+muteBtn.innerHTML = muted ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
 
 if (typeof Difficulty !== "undefined") {
   Difficulty.renderPicker(diffPicker, "snake", () => resetAfterDeath());

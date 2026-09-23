@@ -140,7 +140,7 @@ function shareScore() {
 function toggleMute() {
   muteOn = !muteOn;
   localStorage.setItem("goldutya-breakout-mute", muteOn ? "1" : "0");
-  if (muteBtn) muteBtn.textContent = muteOn ? "🔇" : "🔊";
+  if (muteBtn) muteBtn.textContent = muteOn ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
 }
 
 /* --- clouds --- */
@@ -866,7 +866,7 @@ function loop() {
 /* --- init --- */
 best = Number(localStorage.getItem("goldutya-breakout-best") || 0);
 muteOn = localStorage.getItem("goldutya-breakout-mute") === "1";
-if (muteBtn) { muteBtn.textContent = muteOn ? "🔇" : "🔊"; muteBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(); }); }
+if (muteBtn) { muteBtn.textContent = muteOn ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>'; muteBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(); }); }
 if (shareBtn) shareBtn.addEventListener("click", (e) => { e.stopPropagation(); shareScore(); });
 if (startBtn) startBtn.addEventListener("click", (e) => { e.stopPropagation(); initAudio(); if (state === "ready") { state = "play"; overlay.classList.add("hidden"); if (!hintShown) hintTimer = 120; } if (state === "over") { resetGame(); overlay.classList.add("hidden"); state = "play"; } });
 
