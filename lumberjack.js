@@ -756,7 +756,7 @@
   function finishDeath() {
     // result screen
     S.over = false;
-    wrap.className = 'page_wrap ready in_result';
+    wrap.className = 'page_wrap in_result ready';
     showResult();
   }
 
@@ -834,6 +834,8 @@
     tweens.length = 0;
     deathT = 0;
     updateScoreDOM();
+    shareBtn.classList.remove('shown');
+    tableWrapEl.classList.remove('opened');
     wrap.className = 'page_wrap ready in_game';
   }
 
@@ -841,7 +843,7 @@
     S.started = false;
     S.inGame = false;
     S.cdStarted = false;
-    wrap.className = 'page_wrap ready in_greet in_result';
+    wrap.className = 'page_wrap in_result in_greet ready';
   }
 
   function shareScore() {
@@ -916,14 +918,14 @@
   // Resize (scale canvas to container, keep logical coords)
   // ------------------------------------------------------------------
   function resize() {
-    var maxW = Math.min(600, window.innerWidth);
-    var availH = window.innerHeight - 228;
-    var scale = Math.min(maxW / W, Math.max(availH, 200) / H);
-    var cw = W * scale, ch = H * scale;
-    canvas.style.width = cw + 'px';
-    canvas.style.height = ch + 'px';
-    groundCanvas.style.width = cw + 'px';
-    groundCanvas.style.height = (212 * scale) + 'px';
+    var displayW = Math.min(600, window.innerWidth);
+    var footerH = window.innerHeight <= 480 ? 128 : (window.innerHeight <= 570 ? 188 : 228);
+    var gameH = Math.max(220, window.innerHeight - footerH);
+    var groundH = Math.round(212 * (displayW / 750));
+    canvas.style.width = displayW + 'px';
+    canvas.style.height = gameH + 'px';
+    groundCanvas.style.width = displayW + 'px';
+    groundCanvas.style.height = groundH + 'px';
   }
 
   window.addEventListener('resize', resize);
