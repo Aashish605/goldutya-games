@@ -259,7 +259,7 @@ function reset() {
   nightPhase = 0; nightDir = 0; nightTimer = 0;
   jumpBuffer = 0;
   state = states.READY;
-  if (pauseBtn) pauseBtn.textContent = '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#pause"/></svg>';
+  if (pauseBtn) pauseBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#pause"/></svg>';
 }
 
 reset();
