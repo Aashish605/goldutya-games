@@ -1,0 +1,55 @@
+/* Goldutya Universal Difficulty Selector */
+:root {
+  --picker-line: rgba(255, 255, 255, 0.15);
+  --picker-muted: #A5ADBC;
+  --picker-gold: #F5C518;
+  --picker-dark: #0B0B0D;
+}
+
+.difficulty-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  margin: 6px 0;
+}
+
+.diff-label {
+  font-family: "Space Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 1.5px;
+  color: var(--picker-muted);
+  text-transform: uppercase;
+}
+
+.difficulty-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.difficulty-btn {
+  font-family: "Space Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--picker-line);
+  background: rgba(11, 11, 13, 0.6);
+  color: var(--picker-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 36px;
+}
+
+.difficulty-btn:hover {
+  border-color: var(--picker-gold);
+  color: #fff;
+  background: rgba(245, 197, 24, 0.12);
+}
+
+.difficulty-btn.active {
+  background: var(--picker-gold);
+  color: var(--picker-dark);
+  border-color: var(--picker-gold);
+  font-weight: bold;
+}
