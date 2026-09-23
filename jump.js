@@ -207,16 +207,16 @@ function shareScore() {
 function toggleMute() {
   muteOn = !muteOn;
   localStorage.setItem("goldutya-jump-mute", muteOn ? "1" : "0");
-  if (muteBtn) muteBtn.textContent = muteOn ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
+  if (muteBtn) muteBtn.innerHTML = muteOn ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
 }
 
 function togglePause() {
   if (state === states.PLAY) {
     state = states.PAUSED;
-    if (pauseBtn) pauseBtn.textContent = '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#play"/></svg>';
+    if (pauseBtn) pauseBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#play"/></svg>';
   } else if (state === states.PAUSED) {
     state = states.PLAY;
-    if (pauseBtn) pauseBtn.textContent = '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#pause"/></svg>';
+    if (pauseBtn) pauseBtn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#pause"/></svg>';
   }
 }
 
@@ -1024,7 +1024,7 @@ document.addEventListener("pointerdown", initAudio, { once: true });
 updateSkinUI();
 
 if (muteBtn) {
-  muteBtn.textContent = muteOn ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
+  muteBtn.innerHTML = muteOn ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
   muteBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleMute(); });
 }
 if (typeof Difficulty !== "undefined") {

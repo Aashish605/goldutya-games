@@ -252,19 +252,10 @@ body {
   animation: shake 0.3s ease;
 }
 
-/* ── OVERLAY ── */
+/* ── OVERLAY (opacity-gated; gameover.css supplies base styling) ── */
 .overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(11,11,13,0.98);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s;
-  backdrop-filter: blur(8px);
 }
 
 .overlay.visible {
@@ -282,65 +273,7 @@ body {
   max-width: 360px;
 }
 
-.overlay-duck-img {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 12px rgba(245,197,24,0.5));
-}
-
-.overlay-title {
-  font-family: var(--font-head);
-  font-size: 2.2rem;
-  color: var(--gold);
-  letter-spacing: 2px;
-}
-
-.overlay-sub {
-  font-size: 0.75rem;
-  color: rgba(255,255,255,0.6);
-}
-
 /* ── BUTTONS ── */
-.btn {
-  font-family: var(--font-head);
-  font-size: 1.2rem;
-  letter-spacing: 2px;
-  padding: 10px 36px;
-  border: none;
-  border-radius: 999px;
-  background: var(--gold);
-  color: var(--dark);
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-  box-shadow: 0 4px 20px rgba(245,197,24,0.3);
-}
-
-.btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 4px 28px rgba(245,197,24,0.5);
-}
-
-.btn:active {
-  transform: scale(0.97);
-}
-
-.share-btn {
-  font-family: var(--font-body);
-  font-size: 0.7rem;
-  padding: 8px 20px;
-  border: 1px solid var(--cyan);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--cyan);
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.share-btn:hover {
-  background: rgba(86,217,255,0.1);
-}
-
 /* ── SKIN PICKER ── */
 .skin-picker {
   display: flex;

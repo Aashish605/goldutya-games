@@ -373,7 +373,7 @@ let elapsed = 0;
   muteBtn.addEventListener("click", () => {
     muted = !muted;
     localStorage.setItem("goldutya-memory-mute", muted ? "1" : "0");
-    muteBtn.textContent = muted ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
+    muteBtn.innerHTML = muted ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
   });
 
   diffBtns.addEventListener("click", (e) => {
@@ -400,6 +400,6 @@ let elapsed = 0;
   buildGrid();
   showBest();
   overlay.classList.add("visible");
-  muteBtn.textContent = muted ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
+  muteBtn.innerHTML = muted ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
   
 })();
