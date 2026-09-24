@@ -1,63 +1,49 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Goldutya LumberJack</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="format-detection" content="telephone=no">
-  <meta name="theme-color" content="#D3F8FF">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <link href="lumberjack.css" rel="stylesheet">
-  <link rel="icon" type="image/svg+xml" href="assets/icons.svg">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0B0B0D">
+<title>GOLDUTYA LUMBERJACK</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="ui-tokens.css">
+<link rel="stylesheet" href="gameover.css">
+<link rel="stylesheet" href="difficulty.css">
+<link rel="stylesheet" href="leaderboard.css">
+<link rel="stylesheet" href="lumberjack.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪓%3C/text%3E%3C/svg%3E">
 </head>
-<body class="lumberjack_page">
-  <div id="page_wrap" class="page_wrap in_result in_greet ready">
-    <div id="page_header_wrap" class="page_header_wrap">
-      <div id="page_content_wrap" class="page_content_wrap">
-        <div id="page_content" class="page_content">
-          <div id="table_content" class="table_content" style="display:block;">
-            <div class="game_title">LumberJack</div>
-            <div class="result_score">
-              <div class="result_score_text">You scored</div>
-              <div id="score_value" class="score_value">0</div>
-              <div class="score_share_wrap">
-                <div id="score_share" class="score_share">Share</div>
-              </div>
-            </div>
-            <div class="table_wrap" id="table_wrap">
-              <ul id="table" class="table"></ul>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="canvas_wrap" class="canvas_wrap userty">
-      <div id="g_canvas_wrap" class="canvas_wrap ground">
-        <canvas id="g_canvas" width="750" height="212"></canvas>
-      </div>
-      <canvas id="game_canvas" width="750" height="572"></canvas>
-    </div>
-
-    <div id="page_footer_wrap" class="page_footer_wrap">
-      <div id="page_footer" class="page_footer">
-        <div id="buttons" class="buttons">
-          <div id="button_wrap_left" class="button_wrap button_left">
-            <div id="button_left" class="button">
-              <div class="icon"></div>
-              <div class="icon_refresh"></div>
-              <div class="icon_play"></div>
-            </div>
-          </div>
-          <div id="button_wrap_right" class="button_wrap button_right">
-            <div id="button_right" class="button">
-              <div class="icon"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+<body class="grid-bg">
+<div class="stage">
+  <canvas id="game"></canvas>
+  <div class="game-btns" id="gameBtns">
+    <button class="game-btn" id="btnLeft" aria-label="Chop left"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg></button>
+    <button class="game-btn" id="btnRight" aria-label="Chop right"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg></button>
   </div>
-  <script src="lumberjack.js"></script>
+  <div class="overlay" id="overlay">
+    <img class="overlay-duck-img" src="assets/duck-mid.png" alt="Goldutya duck mascot" aria-hidden="true">
+    <h2 class="overlay-title" id="overlayTitle">GOLDUTYA LUMBERJACK</h2>
+    <p class="overlay-sub" id="overlaySub">Tap left or right to chop the tree! Avoid branches on your side!</p>
+    <div id="diffPicker"></div>
+    <button class="btn" id="startBtn">START</button>
+    <button class="btn share-btn" id="shareBtn" style="display:none;">SHARE SCORE</button>
+    <div id="leaderboard" class="lb-container"></div>
+    <p class="hint" id="hint">Left/Right arrow keys or tap buttons to chop</p>
+    <p class="mini">Play-to-earn on the TON ecosystem</p>
+    <p class="hint" style="margin-top:8px"><a href="index.html" class="btn-back"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#gamepad"/></svg> ALL GAMES</a></p>
+    <p class="hint" style="margin-top:6px">
+      <a href="fly.html" style="color:var(--gold)"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> FLY</a> ·
+      <a href="jump.html" style="color:var(--cyan)"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> JUMP</a> ·
+      <a href="clicker.html" style="color:var(--red)"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> CLICKER</a> ·
+      <a href="memory.html" style="color:#9C27B0"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> MEMORY</a> ·
+      <a href="breakout.html" style="color:#FF9800"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> BREAKOUT</a> ·
+      <a href="snake.html" style="color:#4CAF50"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> SNAKE</a>
+    </p>
+  </div>
+</div>
+<script src="difficulty.js"></script>
+<script src="lumberjack.js"></script>
 </body>
 </html>
