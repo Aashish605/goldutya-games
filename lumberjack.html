@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0B0B0D">
+<meta name="theme-color" content="#333">
 <title>GOLDUTYA LUMBERJACK</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,13 +15,12 @@
 <link rel="stylesheet" href="lumberjack.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪓%3C/text%3E%3C/svg%3E">
 </head>
-<body class="grid-bg">
-<div class="stage">
-  <canvas id="game"></canvas>
-  <div class="game-btns" id="gameBtns">
-    <button class="game-btn" id="btnLeft" aria-label="Chop left"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg></button>
-    <button class="game-btn" id="btnRight" aria-label="Chop right"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg></button>
+<body>
+<div class="page_wrap" id="page_wrap">
+  <div id="canvas_wrap" class="canvas_wrap">
+    <canvas id="game" width="600" height="672"></canvas>
   </div>
+
   <div class="overlay" id="overlay">
     <img class="overlay-duck-img" src="assets/duck-mid.png" alt="Goldutya duck mascot" aria-hidden="true">
     <h2 class="overlay-title" id="overlayTitle">GOLDUTYA LUMBERJACK</h2>
@@ -41,6 +40,21 @@
       <a href="breakout.html" style="color:#FF9800"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> BREAKOUT</a> ·
       <a href="snake.html" style="color:#4CAF50"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> SNAKE</a>
     </p>
+  </div>
+
+  <div class="page_footer">
+    <div class="buttons">
+      <div class="button_wrap button_left">
+        <button id="btnLeft" class="button" aria-label="Chop left">
+          <div class="icon"></div>
+        </button>
+      </div>
+      <div class="button_wrap button_right">
+        <button id="btnRight" class="button" aria-label="Chop right">
+          <div class="icon"></div>
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 <script src="difficulty.js"></script>

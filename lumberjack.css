@@ -1,13 +1,21 @@
-/* lumberjack.css — canvas layout + game buttons */
-body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+/* lumberjack.css — matches original tbot layout structure */
+html, body { margin: 0; padding: 0; height: 100%; background: #333; font-family: Charter, Georgia, serif; }
 
-.stage {
+.page_wrap {
   position: relative;
-  width: 100%;
-  height: 100dvh;
+  height: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  background: #D3F8FF;
   display: flex;
   flex-direction: column;
-  align-items: center;
+}
+
+.canvas_wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
   justify-content: center;
 }
 
@@ -15,46 +23,117 @@ body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
   display: block;
   width: 100%;
   max-width: 600px;
-  aspect-ratio: 750 / 572;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
-  border-radius: 12px;
 }
 
-.game-btns {
+.page_footer {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.buttons {
   display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 44px;
-  margin-top: 16px;
+  padding: 54px 0;
+  position: relative;
+  left: 0;
+  transition: left 0.2s ease-in;
 }
 
-.game-btn {
-  width: 100px;
-  height: 100px;
+.button_wrap {
+  display: inline-block;
+  vertical-align: top;
+  position: relative;
+}
+
+.button {
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
-  border: 4px solid var(--gold, #F5C518);
-  background: rgba(11, 11, 13, 0.7);
-  color: var(--gold, #F5C518);
-  font-size: 2rem;
+  border: 6px solid #e4b072;
+  background: #f2c38c;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transform: scale(1);
+  transition: transform 0.15s ease-in;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.1s, background 0.15s;
+  padding: 0;
 }
-.game-btn:active {
-  transform: scale(0.92);
-  background: rgba(245, 197, 24, 0.2);
-}
-.game-btn .icon {
-  width: 36px;
-  height: 36px;
-}
-#btnLeft .icon { transform: scaleX(-1); }
+.button:active { transform: scale(0.95); }
 
-.overlay {
+.button::before,
+.button::after {
+  border-radius: 50%;
   position: absolute;
+  content: '';
+  display: block;
+  margin: auto;
+  left: -6px; right: -6px; top: -6px; bottom: -6px;
+}
+.button::before {
+  width: 90px;
+  height: 90px;
+  border: 6px solid #e9b87c;
+}
+
+.button .icon {
+  width: 60px;
+  height: 60px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Arrow icons via CSS (no image files needed) */
+#btnLeft .icon {
+  background: none;
+  position: relative;
+}
+#btnLeft .icon::after {
+  content: '';
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-left: 8px solid #886332;
+  border-bottom: 8px solid #886332;
+  transform: rotate(45deg);
+  position: absolute;
+  top: 10px;
+  left: 18px;
+}
+
+#btnRight .icon {
+  background: none;
+  position: relative;
+}
+#btnRight .icon::after {
+  content: '';
+  display: block;
+  width: 30px;
+  height: 30px;
+  border-right: 8px solid #886332;
+  border-top: 8px solid #886332;
+  transform: rotate(45deg);
+  position: absolute;
+  top: 10px;
+  left: 12px;
+}
+
+/* Result state: shift buttons left, hide right button */
+.page_wrap.in_result .buttons { left: 84px; }
+.page_wrap.in_result .button_right { opacity: 0; visibility: hidden; transition: opacity 0.2s; }
+
+/* Overlay (Goldutya) */
+.overlay {
+  position: fixed;
   inset: 0;
   display: flex;
   flex-direction: column;
@@ -62,8 +141,6 @@ body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
   justify-content: center;
   gap: 14px;
   padding: 20px;
-  padding-top: max(20px, env(safe-area-inset-top, 12px));
-  padding-bottom: max(20px, env(safe-area-inset-bottom, 12px));
   background: rgba(6, 8, 12, 0.85);
   backdrop-filter: blur(6px);
   text-align: center;
@@ -72,17 +149,6 @@ body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
 }
 .overlay.hidden { display: none; }
 
-.hint {
-  color: var(--muted, #A5ADBC);
-  font-size: 0.7rem;
-  letter-spacing: 0.5px;
-}
-.hint a { color: var(--gold, #F5C518); text-decoration: none; }
-.hint a:hover { text-decoration: underline; }
-
-.mini {
-  color: var(--muted, #A5ADBC);
-  font-size: 0.6rem;
-  letter-spacing: 1px;
-  opacity: 0.6;
-}
+.hint { color: #A5ADBC; font-size: 0.7rem; letter-spacing: 0.5px; }
+.hint a { color: #F5C518; text-decoration: none; }
+.mini { color: #A5ADBC; font-size: 0.6rem; opacity: 0.6; }
