@@ -404,6 +404,17 @@
     S.dropW += 50;
   }
 
+  // Axe cut line: hand_down sits at feetY-67 (chop stroke). Branch center below that = already under the axe → no longer a threat.
+  function axeCutY() {
+    return L.playerFeetY - 58;
+  }
+
+  function branchBelowAxe(br) {
+    if (!br) return false;
+    var by = L.playerFeetY + S.dropW + br.yRel + (br.ox || 0);
+    return (by - 40) > axeCutY(); // center of 80px branch below cut line
+  }
+
   function chop(left) {
     if (!S.playing || S.over || !S.ready) return;
     setSide(left);
@@ -411,6 +422,22 @@
     // Ca: peek da[0] — do not shift until free path (or abs==1 death uses $a)
     var b = S.queue.length ? S.queue[0] : 0;
     var hit = b !== 0 && left === (b < 0);
+
+    // Branch scrolled below axe cut → not an obstacle; clear it and chop free
+    if (hit && branchBelowAxe(branches[0])) {
+      applyFreeChop(left);
+      S.handAnimUntil = performance.now() + 50;
+      S.deadline = Math.min(S.deadline + S.ga, performance.now() + S.qa);
+      S.score++;
+      sfxChop(); sfxThud();
+      if (S.score % LEVEL_EVERY === 0) {
+        S.level++;
+        S.qa *= LEVEL_FACTOR;
+        S.ga *= LEVEL_FACTOR;
+        levelBanner = { t: 0, T: 120, a: 0 };
+      }
+      return;
+    }
 
     if (hit) {
       // death toward obstacle side
@@ -534,6 +561,8 @@
         var br = branches[i];
         var by = uY + br.yRel + br.ox; // anchor bottom-left at yRel
         var bx = L.branchCX + br.xRel;
+        // hide branches that have scrolled below the axe cut line
+        if ((by - 40) > axeCutY()) continue;
         if (by > -80 && by < H + 20) {
           // left side: sprite flipped, connector attaches at trunk edge
           if (br.side < 0) {
