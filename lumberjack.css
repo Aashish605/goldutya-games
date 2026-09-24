@@ -1,154 +1,430 @@
-/* lumberjack.css — matches original tbot layout structure */
-html, body { margin: 0; padding: 0; height: 100%; background: #333; font-family: Charter, Georgia, serif; }
+/* lumberjack.css — mirrors tbot.xyz/lumber main layout */
+@font-face {
+  font-family: Charter;
+  src: url("assets/fonts/CharterBT.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: Charter;
+  src: url("assets/fonts/CharterBT-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+body {
+  font-family: Charter, Georgia, serif;
+  font-size: 48px;
+  background-color: #333;
+}
 
 .page_wrap {
-  position: relative;
   height: 100%;
-  max-width: 600px;
+  background-color: #d3f7ff;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
   margin: 0 auto;
-  background: #D3F7FF;
-  display: flex;
-  flex-direction: column;
+  max-width: 600px;
+  position: relative;
+  overflow: hidden;
 }
 
 .canvas_wrap {
-  position: relative;
-  flex: 1;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 228px;
+  z-index: 1;
+  pointer-events: none;
 }
-
-#game {
+.canvas_wrap canvas {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  pointer-events: none;
   display: block;
-  width: 100%;
-  max-width: 600px;
-  touch-action: none;
-  -webkit-tap-highlight-color: transparent;
 }
 
-.page_footer {
+.page_content_wrap {
+  display: table;
+  width: 100%;
+  height: 100%;
+  color: #4d4d4d;
   position: relative;
-  flex-shrink: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+.page_content {
+  text-align: center;
+  padding-bottom: 318px;
+  min-height: 100%;
+  box-sizing: border-box;
+  display: table-cell;
+  vertical-align: middle;
+}
+
+.table_content { display: none; }
+.in_greet .table_content,
+.in_result .table_content { display: block; }
+
+.game_title {
+  font-weight: 700;
+  font-size: 54px;
+  padding: 35px 5px;
+  display: none;
+  pointer-events: auto;
+}
+.in_greet .game_title { display: block; }
+
+.result_score {
+  font-weight: 700;
+  font-size: 27px;
+  padding: 22px 20px;
+  display: block;
+}
+.in_greet .result_score { display: none; }
+
+.result_score .score_value,
+.result_score .score_value:after,
+.score_share,
+.score_share_wrap {
+  display: inline-block;
+  vertical-align: top;
+}
+.result_score .score_value {
+  font-size: 54px;
+}
+.result_score .score_value:after {
+  content: '';
+  background: url("assets/lumberjack/score-coin.svg") right no-repeat;
+  background-size: 36px 36px;
+  width: 36px;
+  height: 36px;
+  margin: 20px 0 0 -6px;
+}
+
+.score_share_wrap {
+  position: relative;
+  width: 0;
+}
+.score_share {
+  font-size: 17px;
+  font-weight: 700;
+  border-radius: 20px;
+  border: 4px solid #e4b072;
+  background-color: #f2c38c;
+  color: #715128;
+  margin: 20px 0 0 15px;
+  padding: 4px 10px;
+  line-height: 20px;
+  visibility: hidden;
+  cursor: pointer;
+  transition: transform 0.15s ease-in;
+  pointer-events: auto;
+  position: relative;
+}
+.score_share.shown {
+  animation: share 0.2s ease-out;
+  visibility: visible;
+  z-index: 7;
+}
+.score_share:before {
+  position: absolute;
+  content: '';
+  display: block;
+  border-radius: 20px;
+  left: 6px;
+  right: 6px;
+  top: 5px;
+  bottom: 5px;
+  background: #d79c58;
+  opacity: 0.3;
+}
+.score_share:after {
+  position: absolute;
+  content: '';
+  display: block;
+  border-radius: 20px;
+  left: -4px;
+  right: -4px;
+  top: -4px;
+  bottom: -4px;
+}
+.score_share:hover,
+.score_share.hover {
+  transform: scale3d(0.95, 0.95, 1);
+}
+@keyframes share {
+  from { transform: scale3d(0.3, 0.3, 1); opacity: 0; }
+  80% { transform: scale3d(1.2, 1.2, 1); opacity: 1; }
+  to { transform: scale3d(1, 1, 1); opacity: 1; }
+}
+
+.table_wrap {
+  padding: 0 25px;
+  visibility: hidden;
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease-in, max-height 0.4s ease-in;
+  pointer-events: auto;
+}
+.table_wrap.opened {
+  padding: 0 25px 30px;
+  opacity: 1;
+  visibility: visible;
+  max-height: 1000px;
+}
+.in_greet .table_wrap.opened { padding-bottom: 60px; }
+
+.table {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  list-style: none;
+  font-size: 17px;
+  font-weight: 700;
+}
+.table .row {
+  margin: 0;
+  padding: 4px 15px 5px;
+  font-size: 17px;
+}
+.table .row.you {
+  background: #fff;
+  border-radius: 15px;
+}
+.table .place {
+  float: left;
+  min-width: 14px;
+  padding-right: 10px;
+  color: #88a0a6;
+}
+.table .name {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.table .score {
+  float: right;
+  text-align: right;
+  min-width: 50px;
+  padding-left: 10px;
+}
+.table .score:after {
+  content: '';
+  display: inline-block;
+  background: url("assets/lumberjack/score-coin.svg") right no-repeat;
+  background-size: 13px 13px;
+  width: 13px;
+  height: 13px;
+  margin-left: 6px;
+  vertical-align: -1px;
+}
+
+/* Footer */
+.page_footer_wrap {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  z-index: 2;
+  margin: auto;
+  max-width: 600px;
+}
+.page_footer {
+  height: 228px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in;
+}
+.ready .page_footer {
+  opacity: 1;
+  visibility: visible;
 }
 
 .buttons {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 44px;
-  padding: 54px 0;
   position: relative;
+  padding: 54px 0;
+  text-align: center;
   left: 0;
   transition: left 0.2s ease-in;
 }
+.in_result .buttons { left: 84px; }
 
 .button_wrap {
   display: inline-block;
   vertical-align: top;
   position: relative;
 }
+.button_wrap + .button_wrap { margin-left: 44px; }
 
 .button {
+  position: relative;
   width: 120px;
   height: 120px;
+  box-sizing: border-box;
   border-radius: 50%;
   border: 6px solid #e4b072;
-  background: #f2c38c;
+  background-color: #f2c38c;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transform: scale(1);
   transition: transform 0.15s ease-in;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
 }
-.button:active { transform: scale(0.95); }
-
-.button::before,
-.button::after {
+.button:active,
+.button.hover {
+  transform: scale3d(0.95, 0.95, 1);
+}
+.button:before,
+.button:after {
   border-radius: 50%;
   position: absolute;
   content: '';
   display: block;
-  margin: auto;
-  left: -6px; right: -6px; top: -6px; bottom: -6px;
+  box-sizing: border-box;
 }
-.button::before {
+.button:before {
   width: 90px;
   height: 90px;
   border: 6px solid #e9b87c;
+  left: -6px;
+  right: -6px;
+  top: -6px;
+  bottom: -6px;
+  margin: auto;
 }
 
-.button .icon {
+.button_left .icon,
+.button_left .icon_play,
+.button_left .icon_refresh,
+.button_right .icon {
   width: 60px;
   height: 60px;
-  background-size: contain;
+  background-size: 60px 60px;
   background-repeat: no-repeat;
   background-position: center;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: auto;
+  transition: opacity 0.2s ease-in;
   z-index: 1;
   pointer-events: none;
 }
+.button_left .icon { background-image: url("assets/lumberjack/left.png"); }
+.button_right .icon { background-image: url("assets/lumberjack/right.png"); }
+.button_left .icon_play { background-image: url("assets/lumberjack/play.png"); }
+.button_left .icon_refresh { background-image: url("assets/lumberjack/refresh.png"); }
 
-/* Arrow icons via CSS (no image files needed) */
-#btnLeft .icon {
-  background: none;
-  position: relative;
-}
-#btnLeft .icon::after {
-  content: '';
-  display: block;
-  width: 30px;
-  height: 30px;
-  border-left: 8px solid #886332;
-  border-bottom: 8px solid #886332;
-  transform: rotate(45deg);
-  position: absolute;
-  top: 10px;
-  left: 18px;
-}
+.button_left .icon,
+.button_left .icon_play,
+.button_left .icon_refresh { display: none; }
+.in_result.in_greet .button_left .icon_refresh { display: none; }
+.in_game .button_left .icon { display: block; }
+.in_greet .button_left .icon_play { display: block; }
+.in_result .button_left .icon_refresh { display: block; }
 
-#btnRight .icon {
-  background: none;
-  position: relative;
-}
-#btnRight .icon::after {
-  content: '';
-  display: block;
-  width: 30px;
-  height: 30px;
-  border-right: 8px solid #886332;
-  border-top: 8px solid #886332;
-  transform: rotate(45deg);
-  position: absolute;
-  top: 10px;
-  left: 12px;
+.button_right { opacity: 1; transition: opacity 0.2s ease-in; }
+.in_result .button_right {
+  opacity: 0;
+  visibility: hidden;
 }
 
-/* Result state: shift buttons left, hide right button */
-.page_wrap.in_result .buttons { left: 84px; }
-.page_wrap.in_result .button_right { opacity: 0; visibility: hidden; transition: opacity 0.2s; }
+/* Responsive (from original) */
+@media (max-height: 570px) {
+  .page_footer { height: 188px; }
+  .buttons { padding: 34px 0; }
+  .canvas_wrap { bottom: 188px; }
+  .page_content { padding-bottom: 278px; }
+}
+@media (max-height: 480px) {
+  .page_footer { height: 128px; }
+  .buttons { padding: 14px 0; }
+  .in_result .buttons { left: 74px; }
+  .canvas_wrap { bottom: 128px; }
+  .button, .button:after { width: 100px; height: 100px; }
+  .button:before { display: none; }
+  .page_content { padding-bottom: 218px; }
+  .game_title, .result_score .score_value { font-size: 50px; }
+}
+@media (max-height: 480px) and (min-width: 480px) {
+  .page_wrap { max-width: 800px; }
+  .page_footer_wrap { top: 0; background: transparent; max-width: 800px; }
+  .page_footer { height: auto; }
+  .buttons { position: static; }
+  .in_result .buttons { left: auto; }
+  .button_wrap .button { position: absolute; top: 0; bottom: 0; margin: auto 14px; z-index: 11; }
+  .button_left .button { left: 0; }
+  .button_right .button { right: 0; }
+  .in_result .button_left .button { left: auto; right: 0; }
+  .table_wrap.opened { padding-right: 125px; }
+  .page_content { padding-bottom: 90px; }
+  .canvas_wrap { bottom: 0; }
+}
+@media (max-width: 350px) {
+  .game_title { font-size: 44px; }
+  .table_wrap.opened { padding-left: 15px; padding-right: 15px; }
+}
+@media (min-width: 600px) {
+  .page_footer_wrap { width: 600px; }
+}
+@media (max-height: 480px) and (min-width: 800px) {
+  .page_footer_wrap { width: 800px; }
+}
 
-/* Overlay (Goldutya) */
-.overlay {
+.loading .page_footer { opacity: 0; visibility: hidden; }
+
+/* Goldutya nav strip (below game, non-intrusive) */
+.goldutya-nav {
   position: fixed;
-  inset: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 14px;
-  padding: 20px;
-  background: rgba(6, 8, 12, 0.85);
-  backdrop-filter: blur(6px);
-  text-align: center;
-  z-index: 20;
-  transition: opacity 0.3s;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+  background: rgba(11, 11, 13, 0.92);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
 }
-.overlay.hidden { display: none; }
-
-.hint { color: #A5ADBC; font-size: 0.7rem; letter-spacing: 0.5px; }
-.hint a { color: #F5C518; text-decoration: none; }
-.mini { color: #A5ADBC; font-size: 0.6rem; opacity: 0.6; }
+.goldutya-nav a {
+  color: #F5C518;
+  text-decoration: none;
+  opacity: 0.85;
+}
+.goldutya-nav a:hover { opacity: 1; }
+.goldutya-nav .sep { color: #555; }
+.goldutya-nav .icon {
+  width: 1em;
+  height: 1em;
+  fill: currentColor;
+  vertical-align: -0.1em;
+}
+/* Lift footer above nav when short screens — nav overlays page bottom */
+@media (min-height: 571px) {
+  .page_footer_wrap { bottom: 28px; }
+  .canvas_wrap { bottom: calc(228px + 28px); }
+}
+@media (max-height: 570px) and (min-height: 481px) {
+  .page_footer_wrap { bottom: 28px; }
+  .canvas_wrap { bottom: calc(188px + 28px); }
+}

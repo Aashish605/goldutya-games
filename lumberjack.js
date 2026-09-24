@@ -1,202 +1,731 @@
-/* Goldutya LumberJack — matches original tbot layout (600×672 canvas + footer) */
+/* Goldutya LumberJack — layout/render matches tbot.xyz/lumber (600×672 + exact sprite positions). */
 (function () {
   'use strict';
 
-  var W = 600, H = 672;
+  // ------------------------------------------------------------------
+  // Dimensions (computed like original Oa/Pa)
+  // ------------------------------------------------------------------
+  var W = 600, H = 672; // set in resize()
+  var FOOTER_H = 228;
+
   var QA = 8500, GA = 250, START_MS = 4250;
   var WARN_FRAC = 0.25, LEVEL_EVERY = 20, LEVEL_FACTOR = 0.95;
-  var TRUNK_W = 50, TRUNK_H = 375, BRANCH_W = 125, BRANCH_H = 80;
 
-  var GROUND_Y = H - 95;
-  var GROUND_BG_X = 139, GROUND_RIGHT_W = 195;
-  var STUMP_X = W / 2 - 25, STUMP_Y = H - 105;
-  var PLAYER_FEET_Y = H - 55, PLAYER_DX = 35;
-
-  var canvas = document.getElementById('game');
-  var ctx = canvas.getContext('2d');
-  var overlay = document.getElementById('overlay');
-  var overlayTitle = document.getElementById('overlayTitle');
-  var overlaySub = document.getElementById('overlaySub');
-  var startBtn = document.getElementById('startBtn');
-  var shareBtn = document.getElementById('shareBtn');
-  var leaderboardEl = document.getElementById('leaderboard');
-  var diffPicker = document.getElementById('diffPicker');
-  var btnLeft = document.getElementById('btnLeft');
-  var btnRight = document.getElementById('btnRight');
-  var BEST_KEY = 'lumberjack.best';
-
+  // Sprite native sizes (SVG px) and display sizes (half-scale like tileScale 0.5)
   var ASSETS = {
-    bg_clouds:  { src: 'assets/lumberjack/bg_clouds.svg',  w: 475, h: 128 },
-    bg_trees:   { src: 'assets/lumberjack/bg_trees.svg',   w: 420, h: 140 },
-    bg_bottom:  { src: 'assets/lumberjack/bg_bottom.svg',  w: 210, h: 90  },
-    ground_left:{ src: 'assets/lumberjack/ground_left.svg',w: 140, h: 95  },
-    ground_right:{src: 'assets/lumberjack/ground_right.svg',w: 195, h: 95 },
-    trunk:      { src: 'assets/lumberjack/trunk.svg',      w: TRUNK_W, h: TRUNK_H },
-    log:        { src: 'assets/lumberjack/log.svg',        w: 50,  h: 50  },
-    branch:     { src: 'assets/lumberjack/branch.svg',     w: BRANCH_W, h: BRANCH_H },
-    stumb:      { src: 'assets/lumberjack/stumb.svg',      w: 50,  h: 60  },
-    lumber_body:{ src: 'assets/lumberjack/lumber_body.svg',w: 50,  h: 107 },
-    lumber_died:{ src: 'assets/lumberjack/lumber_died.svg',w: 73,  h: 85  },
-    hand_up:    { src: 'assets/lumberjack/hand_up.svg',    w: 47,  h: 52  },
-    hand_down:  { src: 'assets/lumberjack/hand_down.svg',  w: 59,  h: 9   },
-    timeline:   { src: 'assets/lumberjack/timeline.svg',   w: 100, h: 21  },
-    timeline_bar:{src: 'assets/lumberjack/timeline_bar.svg',w: 88, h: 9   },
-    timeline_warn:{src:'assets/lumberjack/timeline_warn.svg',w: 88, h: 9   }
+    bg_trees:     { src: 'assets/lumberjack/bg_trees.svg',     nw: 840, nh: 280, w: 420, h: 140 },
+    bg_bottom:    { src: 'assets/lumberjack/bg_bottom.svg',    nw: 420, nh: 180, w: 210, h: 90 },
+    bg_clouds:    { src: 'assets/lumberjack/bg_clouds.svg',    nw: 950, nh: 256, w: 475, h: 128 },
+    ground_bg:    { src: 'assets/lumberjack/ground_bg.svg',    nw: 2,   nh: 190, w: 1,   h: 95 },
+    ground_left:  { src: 'assets/lumberjack/ground_left.svg',  nw: 280, nh: 190, w: 140, h: 95 },
+    ground_right: { src: 'assets/lumberjack/ground_right.svg', nw: 390, nh: 190, w: 195, h: 95 },
+    trunk:        { src: 'assets/lumberjack/trunk.svg',        nw: 100, nh: 750, w: 50,  h: 375 },
+    log:          { src: 'assets/lumberjack/log.svg',          nw: 100, nh: 100, w: 50,  h: 50 },
+    branch:       { src: 'assets/lumberjack/branch.svg',       nw: 250, nh: 160, w: 125, h: 80 },
+    stumb:        { src: 'assets/lumberjack/stumb.svg',        nw: 100, nh: 120, w: 50,  h: 60 },
+    stones:       { src: 'assets/lumberjack/stones.svg',       nw: 150, nh: 72,  w: 75,  h: 36 },
+    lumber_body:  { src: 'assets/lumberjack/lumber_body.svg',  nw: 100, nh: 214, w: 50,  h: 107 },
+    lumber_died:  { src: 'assets/lumberjack/lumber_died.svg',  nw: 141, nh: 170, w: 73,  h: 85 },
+    hand_up:      { src: 'assets/lumberjack/hand_up.svg',      nw: 94,  nh: 104, w: 47,  h: 52 },
+    hand_down:    { src: 'assets/lumberjack/hand_down.svg',    nw: 118, nh: 18,  w: 59,  h: 9 },
+    timeline:     { src: 'assets/lumberjack/timeline.svg',     nw: 200, nh: 42,  w: 100, h: 21 },
+    timeline_bar: { src: 'assets/lumberjack/timeline_bar.svg', nw: 176, nh: 18,  w: 88,  h: 9 },
+    timeline_warn:{ src: 'assets/lumberjack/timeline_warn.svg',nw: 176, nh: 18,  w: 88,  h: 9 }
   };
 
   var imgs = {}, loaded = 0, totalAssets = Object.keys(ASSETS).length;
 
+  // ------------------------------------------------------------------
+  // DOM
+  // ------------------------------------------------------------------
+  var pageWrap = document.getElementById('page_wrap');
+  var canvasWrap = document.getElementById('canvas_wrap');
+  var scoreValueEl = document.getElementById('score_value');
+  var scoreShareEl = document.getElementById('score_share');
+  var tableEl = document.getElementById('table');
+  var tableWrapEl = document.getElementById('table_wrap');
+  var btnLeft = document.getElementById('btnLeft');
+  var btnRight = document.getElementById('btnRight');
+
+  var canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  canvasWrap.appendChild(canvas);
+  var ctx = canvas.getContext('2d');
+
+  var BEST_KEY = 'lumberjack.scores';
+
+  // ------------------------------------------------------------------
+  // State (mirrors original: Z=started, h=over/idle-result, aa=playing)
+  // ------------------------------------------------------------------
+  var S = {
+    started: false,     // Z
+    over: true,         // h  (true on greet so in_result shows ground scene)
+    playing: false,     // aa
+    ready: false,       // xa
+    score: 0,           // ca
+    level: 1,           // Ha
+    side: false,        // m  (false=right, true=left)
+    queue: [0, 0],      // da
+    pa: 100,
+    dropW: 0,           // W vertical scroll
+    deadline: 0,
+    qa: QA,
+    ga: GA,
+    handAnimUntil: 0,
+    levelBannerT: 0,
+    cloudX: 15,
+    frame: 0
+  };
+
+  var branches = [];    // sprites in container u: {side, type, y, sprite-ish}
+  var fallers = [];
+  var lastFrame = 0;
+  var warnBlink = 0;
+  var levelBanner = null;
+
+  // ------------------------------------------------------------------
+  // Audio
+  // ------------------------------------------------------------------
+  var aCtx = null;
+  function audio() {
+    if (!aCtx) { try { aCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    return aCtx;
+  }
+  function blip(f, d, type, v, s) {
+    var ac = audio(); if (!ac) return;
+    try {
+      var o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(f, t);
+      if (s) o.frequency.exponentialRampToValueAtTime(s, t + d);
+      g.gain.setValueAtTime(v || 0.2, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + d);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t); o.stop(t + d);
+    } catch (e) {}
+  }
+  function noise(f, d, v) {
+    var ac = audio(); if (!ac) return;
+    try {
+      var l = Math.floor(ac.sampleRate * d), b = ac.createBuffer(1, l, ac.sampleRate), c = b.getChannelData(0);
+      for (var i = 0; i < l; i++) c[i] = (Math.random() * 2 - 1) * (1 - i / l);
+      var s = ac.createBufferSource(); s.buffer = b;
+      var fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = f; fl.Q.value = 1.2;
+      var g = ac.createGain(); g.gain.value = v || 0.18;
+      s.connect(fl); fl.connect(g); g.connect(ac.destination); s.start();
+    } catch (e) {}
+  }
+  function sfxChop() { noise(2100, 0.08, 0.22); blip(150, 0.1, 'sine', 0.25, 65); }
+  function sfxBranch() { blip(320, 0.12, 'triangle', 0.2, 90); }
+  function sfxDeath() { blip(260, 0.4, 'sawtooth', 0.2, 40); noise(700, 0.3, 0.15); }
+  function sfxThud() { blip(90, 0.12, 'sine', 0.3, 50); }
+
+  // ------------------------------------------------------------------
+  // Assets
+  // ------------------------------------------------------------------
   function loadAll(cb) {
     Object.keys(ASSETS).forEach(function (k) {
       var img = new Image();
-      img.onload = function () { imgs[k] = img; loaded++; if (loaded >= totalAssets) cb(); };
-      img.onerror = function () { loaded++; if (loaded >= totalAssets) cb(); };
+      img.onload = function () { imgs[k] = img; if (++loaded >= totalAssets) cb(); };
+      img.onerror = function () { if (++loaded >= totalAssets) cb(); };
       img.src = ASSETS[k].src;
     });
   }
 
-  function spr(k, g, x, y, flip) {
-    var a = ASSETS[k];
-    if (!imgs[k]) return;
-    if (flip) { g.save(); g.translate(x + a.w, y); g.scale(-1, 1); g.drawImage(imgs[k], 0, 0, a.w, a.h); g.restore(); }
-    else { g.drawImage(imgs[k], 0, 0, a.w, a.h, x, y, a.w, a.h); }
+  // ------------------------------------------------------------------
+  // Draw helpers
+  // ------------------------------------------------------------------
+  function drawSprite(key, x, y, w, h, flipX, alpha) {
+    var img = imgs[key], a = ASSETS[key];
+    if (!img) return;
+    w = w != null ? w : a.w;
+    h = h != null ? h : a.h;
+    if (alpha != null && alpha < 1) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    }
+    if (flipX) {
+      ctx.save();
+      ctx.translate(x + w, y);
+      ctx.scale(-1, 1);
+      ctx.drawImage(img, 0, 0, a.nw, a.nh, 0, 0, w, h);
+      ctx.restore();
+    } else {
+      ctx.drawImage(img, 0, 0, a.nw, a.nh, x, y, w, h);
+    }
+    if (alpha != null && alpha < 1) ctx.restore();
   }
 
-  var S = { queue:[0,0], pa:100, drop:0, side:-1, started:false, inGame:false,
-    cdStarted:false, deadline:0, frame:0, score:0, level:1, qa:QA, ga:GA,
-    levelHold:0, over:false, ready:false };
+  /* TilingSprite equivalent: tile texture across rect at half scale with offsets */
+  function drawTiled(key, dx, dy, dw, dh, tileX, tileY) {
+    var img = imgs[key], a = ASSETS[key];
+    if (!img || dw <= 0 || dh <= 0) return;
+    var tw = a.w, th = a.h; // half-scale tile size
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(dx, dy, dw, dh);
+    ctx.clip();
+    // PixiJS tilePosition shifts texture origin: visible texel at output = (x - dx - tileX)
+    var startX = dx + (tileX % tw);
+    if (startX > dx) startX -= tw;
+    var startY = dy + (tileY % th);
+    if (startY > dy) startY -= th;
+    for (var y = startY; y < dy + dh; y += th) {
+      for (var x = startX; x < dx + dw; x += tw) {
+        ctx.drawImage(img, 0, 0, a.nw, a.nh, x, y, tw, th);
+      }
+    }
+    ctx.restore();
+  }
 
-  var branches=[], fallers=[], deathT=0, levelHoldTotal=0, levelBanner=null,
-      warnBlink=0, cloudX=0, lastFrame=0, handAnimAt=0;
+  function drawText(txt, x, y, font, fill, shadow, scaleX) {
+    ctx.save();
+    ctx.font = font;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    if (scaleX && scaleX !== 1) {
+      ctx.translate(x, y);
+      ctx.scale(scaleX, 1);
+      x = 0; y = 0;
+    }
+    if (shadow) {
+      ctx.fillStyle = shadow;
+      ctx.fillText(txt, x + 1.5, y + 1.5);
+    }
+    ctx.fillStyle = fill;
+    ctx.fillText(txt, x, y);
+    ctx.restore();
+  }
 
-  // Audio
-  var aCtx=null;
-  function audio(){ if(!aCtx)try{aCtx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){} return aCtx; }
-  function blip(f,d,type,v,s){var ac=audio();if(!ac)return;try{var o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(s)o.frequency.exponentialRampToValueAtTime(s,t+d);g.gain.setValueAtTime(v||.2,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d)}catch(e){}}
-  function noise(f,d,v){var ac=audio();if(!ac)return;try{var l=Math.floor(ac.sampleRate*d),b=ac.createBuffer(1,l,ac.sampleRate),c=b.getChannelData(0);for(var i=0;i<l;i++)c[i]=(Math.random()*2-1)*(1-i/l);var s=ac.createBufferSource();s.buffer=b;var fl=ac.createBiquadFilter();fl.type='bandpass';fl.frequency.value=f;fl.Q.value=1.2;var g=ac.createGain();g.gain.value=v||.18;s.connect(fl);fl.connect(g);g.connect(ac.destination);s.start()}catch(e){}}
-  function sfxChop(){noise(2100,.08,.22);blip(150,.1,'sine',.25,65)}
-  function sfxBranch(){blip(320,.12,'triangle',.2,90)}
-  function sfxDeath(){blip(260,.4,'sawtooth',.2,40);noise(700,.3,.15)}
-  function sfxThud(){blip(90,.12,'sine',.3,50)}
+  // ------------------------------------------------------------------
+  // Layout positions (Pa function equivalent) — recomputed on resize
+  // ------------------------------------------------------------------
+  var L = {};
+  function layout() {
+    L.groundY = H - 95;                 // t.y = f-95 = 577
+    L.groundMidX = 139;
+    L.groundMidW = Math.max(0, W - 139 - 194); // 267
+    L.groundRightX = W - 195;
+    L.bgBottomY = H - 130;              // 542
+    L.bgTreesTileY = H - 52;            // tilePosition.y
+    L.stumpX = (W - 50) / 2;            // 275
+    L.stumpY = H - 45 - 60;             // 567
+    L.stonesX = (W - 75) / 2;           // 262.5
+    L.stonesY = H - 34 - 36;            // 602
+    L.playerFeetY = H - 55;             // 617
+    L.branchCX = W / 2;
+    L.branchCY = H - 105;               // 567 (K.y)
+    L.trunkX = (W - 50) / 2;
+    L.trunkH = H - 45;                  // 627
+    L.timelineX = W / 2 - 44;
+    L.timelineY = 15;
+    L.scoreY = 30;
+    L.levelY = 56;
+    canvas.width = W;
+    canvas.height = H;
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+  }
 
+  function resize() {
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    // Match original: footer 228/188/128 based on height; wrap max 600 (or 800 landscape short)
+    var wide = vh <= 480 && vw >= 480;
+    var footerH = vh <= 480 ? 128 : vh <= 570 ? 188 : 228;
+    var availH = vh - footerH;
+    W = Math.min(vw, wide ? 800 : 600);
+    if (W < 375) W = Math.min(vw, 375);
+    H = Math.max(320, availH);
+    FOOTER_H = footerH;
+    layout();
+  }
+
+  // ------------------------------------------------------------------
+  // State classes (Ia)
+  // ------------------------------------------------------------------
+  function setStateClasses() {
+    // in_greet: !started; in_game: !over; in_result: over
+    toggleClass(pageWrap, 'in_greet', !S.started);
+    toggleClass(pageWrap, 'in_game', !S.over);
+    toggleClass(pageWrap, 'in_result', S.over);
+    toggleClass(pageWrap, 'ready', S.ready);
+    toggleClass(pageWrap, 'loading', !S.ready);
+  }
+  function toggleClass(el, cls, on) {
+    if (on) el.classList.add(cls);
+    else el.classList.remove(cls);
+  }
+
+  // ------------------------------------------------------------------
   // Leaderboard
-  function loadBest(){try{return JSON.parse(localStorage.getItem(BEST_KEY)||'[]')}catch(e){return[]}}
-  function saveBest(b){try{localStorage.setItem(BEST_KEY,JSON.stringify(b))}catch(e){}}
-  function submitScore(){var b=loadBest();b.push({name:'You',score:S.score});b.sort(function(a,c){return c.score-a.score});b=b.slice(0,5);saveBest(b);renderLeaderboard(b)}
-  function renderLeaderboard(b){if(!b)b=loadBest();if(!b.length){leaderboardEl.innerHTML='';return}var h='<div class="lb-title">LEADERBOARD</div><ul class="lb-list">';for(var i=0;i<b.length;i++)h+='<li class="lb-row'+(b[i].name==='You'?' you':'')+'"><span class="lb-place">'+(i+1)+'</span><span class="lb-name">'+esc(b[i].name)+'</span><span class="lb-score">'+b[i].score+'</span></li>';h+='</ul>';leaderboardEl.innerHTML=h}
-  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  // ------------------------------------------------------------------
+  function loadScores() {
+    try { return JSON.parse(localStorage.getItem(BEST_KEY) || '[]'); }
+    catch (e) { return []; }
+  }
+  function saveScores(list) {
+    try { localStorage.setItem(BEST_KEY, JSON.stringify(list)); } catch (e) {}
+  }
+  function submitScore() {
+    if (!S.started) return;
+    var list = loadScores();
+    list.push({ name: 'You', score: S.score, current: true });
+    list.sort(function (a, b) { return b.score - a.score; });
+    list = list.slice(0, 10);
+    list.forEach(function (r, i) { r.pos = i + 1; r.current = r.name === 'You' && r.score === S.score; });
+    // keep only one current
+    var seen = false;
+    list.forEach(function (r) {
+      if (r.current) { if (seen) r.current = false; else seen = true; }
+    });
+    saveScores(list);
+    renderTable(list);
+    scoreShareEl.classList.add('shown');
+  }
+  function renderTable(list) {
+    if (list === false || !list) { tableWrapEl.classList.remove('opened'); return; }
+    if (!list.length) { tableWrapEl.classList.remove('opened'); return; }
+    var html = '';
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      html += '<li class="row' + (b.current ? ' you' : '') + '"><span class="place">' + (b.pos || (i + 1)) +
+        '.</span><span class="score">' + b.score + '</span><div class="name">' + escapeHtml(b.name) + '</div></li>';
+    }
+    tableEl.innerHTML = html;
+    tableWrapEl.classList.add('opened');
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
 
+  // ------------------------------------------------------------------
+  // Score text (Fa)
+  // ------------------------------------------------------------------
+  function updateScoreText() {
+    var a = String(S.score || 0);
+    scoreValueEl.textContent = a;
+    // canvas score drawn in render via S.score
+  }
+
+  // ------------------------------------------------------------------
+  // Seed / start / death
+  // ------------------------------------------------------------------
+  function seedQueue() {
+    S.queue = [0, 0];
+    S.pa = 100;
+    branches = [];
+    var yRel = -S.pa; // relative to container u (at player feet)
+    // Fill to 11 entries like original
+    while (S.queue.length < 11) {
+      var left = Math.random() < 0.5;
+      var side = left ? -1 : 1;
+      S.queue.push(side, side * 2);
+      S.pa += 100;
+      branches.push({
+        side: side,          // -1 left, 1 right
+        type: 2,             // branch (obstacle)
+        yRel: -S.pa,         // relative to u.y (player feet)
+        xRel: left ? -10 : 10,
+        ox: 0                // fall offset
+      });
+    }
+    // recompute yRel on first branch for initial layout - actually push created them already
+  }
+
+  function startGame() {
+    if (!S.ready) return;
+    S.started = true;
+    S.over = false;
+    S.playing = true;
+    S.score = 0;
+    S.level = 1;
+    S.qa = QA;
+    S.ga = GA;
+    S.dropW = 0;
+    S.deadline = performance.now() + START_MS;
+    S.handAnimUntil = 0;
+    levelBanner = null;
+    fallers = [];
+    scoreShareEl.classList.remove('shown');
+    seedQueue();
+    updateScoreText();
+    setStateClasses();
+    renderTable(loadScores());
+  }
+
+  function doDeath(fromLeft) {
+    if (S.over) return;
+    S.over = true;
+    S.playing = false;
+    sfxDeath();
+    setSide(fromLeft);
+    // small delay then show result (original: setTimeout 400)
+    setTimeout(function () {
+      updateScoreText();
+      submitScore();
+      setStateClasses();
+    }, 400);
+  }
+
+  function setSide(left) {
+    S.side = !!left;
+    // positions applied during render
+  }
+
+  // ------------------------------------------------------------------
+  // Chop
+  // ------------------------------------------------------------------
+  function chop(left) {
+    if (!S.playing || S.over || !S.ready) return;
+    setSide(left);
+    var d = S.queue.shift();
+    if (S.queue.length % 2 === 1) pushPair();
+
+    if (d !== 0) {
+      var obsLeft = d < 0;
+      if (obsLeft === left) {
+        // hit branch
+        spawnFalling(Math.abs(d) === 2 ? 'branch' : 'log', obsLeft);
+        sfxBranch();
+        doDeath(left);
+        return;
+      }
+    }
+
+    // free chop
+    S.score++;
+    S.handAnimUntil = performance.now() + 50;
+    S.deadline = Math.min(S.deadline + S.ga, performance.now() + S.qa);
+    sfxChop(); sfxThud();
+
+    if (S.score % LEVEL_EVERY === 0) {
+      S.level++;
+      S.qa *= LEVEL_FACTOR;
+      S.ga *= LEVEL_FACTOR;
+      levelBanner = { t: 0, T: 120, a: 0 };
+    }
+
+    // spawn falling piece from chopped segment
+    if (d !== 0) spawnFalling(Math.abs(d) === 2 ? 'branch' : 'log', d < 0);
+    // scroll branch container down 50
+    S.dropW += 50;
+    // remove lowest branch sprite that scrolled past
+    if (branches.length) branches.shift();
+    // re-seed branch visual for new top branch
+    if (S.queue.length < 6) pushBranchSprite();
+  }
+
+  function pushPair() {
+    var left = Math.random() < 0.5;
+    var side = left ? -1 : 1;
+    S.queue.push(side, side * 2);
+    S.pa += 100;
+    pushBranchSprite(side, left);
+  }
+
+  function pushBranchSprite(side, left) {
+    if (side == null) {
+      left = Math.random() < 0.5;
+      side = left ? -1 : 1;
+    }
+    // place one viewport-worth above lowest
+    var minRel = 0;
+    for (var i = 0; i < branches.length; i++) {
+      if (branches[i].yRel < minRel) minRel = branches[i].yRel;
+    }
+    branches.push({
+      side: side,
+      type: 2,
+      yRel: minRel - 100,
+      xRel: left ? -10 : 10,
+      ox: 0
+    });
+  }
+
+  function spawnFalling(kind, left) {
+    var dir = left ? -1 : 1;
+    fallers.push({
+      kind: kind,
+      x: W / 2 + dir * 45,
+      y: L.stumpY - 40,
+      vx: dir * 130,
+      rot: 0,
+      vr: dir < 0 ? 0.12 : -0.12,
+      alpha: 1,
+      t: 0,
+      T: 24,
+      side: dir
+    });
+  }
+
+  // ------------------------------------------------------------------
   // Countdown
-  function startCountdown(){S.cdStarted=true;S.deadline=performance.now()+START_MS}
-  function onChopCountdown(){if(!S.cdStarted){startCountdown();return}S.deadline=Math.min(S.deadline+S.ga,performance.now()+S.qa)}
-  function updateCountdown(){if(!S.inGame||!S.cdStarted||S.over)return;if(performance.now()>=S.deadline)doDeath(S.side<0)}
-
-  // Queue + branches
-  function pushPair(){var s=Math.random()<.5?-1:1;S.queue.push(s,2*s);S.pa+=100;var y=branches.length?branches[branches.length-1].y:(STUMP_Y+80);branches.push({side:s,y:y-100})}
-  function seedTree(){S.queue=[0,0];S.pa=100;branches=[];var y=STUMP_Y+80;for(var i=0;i<6;i++){var s=Math.random()<.5?-1:1;y-=100;branches.push({side:s,y:y});if(i%2===1){S.queue.push(s,2*s);S.pa+=100}}}
-
-  // Chopping
-  function chop(left){
-    if(!S.inGame||S.over||!S.ready)return;
-    S.side=left?-1:1;
-    var d=S.queue.shift();
-    if(S.queue.length%2===1)pushPair();
-    if(d!==0){var obsLeft=d<0;if(obsLeft===left){spawnFalling(d);sfxBranch();doDeath(left,d);return}}
-    S.score++;handAnimAt=S.frame;onChopCountdown();sfxChop();sfxThud();
-    if(S.score%LEVEL_EVERY===0){S.level++;S.qa*=LEVEL_FACTOR;S.ga*=LEVEL_FACTOR;S.levelHold=levelHoldTotal=2000}
-    if(branches.length&&d!==0)spawnFalling(d);
-    if(branches.length)branches.shift();
-    S.drop+=50;
-  }
-  function spawnFalling(d){var piece=Math.abs(d)==='2'?'branch':'log';var dir=d<0?-1:1;fallers.push({kind:piece,x:W/2+dir*45,y:STUMP_Y-60,vx:dir*130,rot:0,vr:dir<0?.12:-.12,alpha:1,t:0,T:24,side:dir})}
-  function doDeath(left,d){if(S.over)return;S.over=true;S.inGame=false;sfxDeath();deathT=26}
-  function finishDeath(){S.cdStarted=false;S.started=false;submitScore();overlayTitle.textContent='GAME OVER';overlaySub.innerHTML='You scored <b>'+S.score+'</b> chops!';startBtn.textContent='PLAY AGAIN';shareBtn.style.display='';showOverlay()}
-
-  var levelBanner=null;
-
-  // Overlay
-  var overlayDuck=document.querySelector('.overlay-duck-img');
-  function showOverlay(){overlay.classList.remove('hidden')}
-  function hideOverlay(){overlay.classList.add('hidden')}
-  function startGame(){if(!S.ready)return;S.score=0;S.level=1;S.qa=QA;S.ga=GA;S.drop=0;S.side=-1;S.started=true;S.inGame=true;S.cdStarted=false;S.deadline=0;S.over=false;S.levelHold=0;deathT=0;fallers.length=0;seedTree();hideOverlay()}
-  function shareScore(){var t='I scored '+S.score+' in LumberJack on Goldutya!';if(navigator.share)navigator.share({text:t}).catch(function(){});else if(navigator.clipboard)navigator.clipboard.writeText(t).catch(function(){})}
-
-  // Input
-  function bindBtn(el,left){el.addEventListener('click',function(e){e.preventDefault();if(!S.inGame||S.over)return;chop(left)});el.addEventListener('touchstart',function(e){if(S.inGame&&!S.over)e.preventDefault()},{passive:false})}
-  bindBtn(btnLeft,true);bindBtn(btnRight,false);
-  document.addEventListener('keydown',function(e){if(e.key==='ArrowLeft'){if(S.inGame&&!S.over)chop(true);e.preventDefault()}else if(e.key==='ArrowRight'){if(S.inGame&&!S.over)chop(false);e.preventDefault()}else if(e.key===' '||e.key==='Enter'){if(!S.inGame||S.over){e.preventDefault();startGame()}}});
-  startBtn.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();startGame()});
-  shareBtn.addEventListener('click',shareScore);
-
-  // Main loop
-  function tick(now){
-    if(!lastFrame)lastFrame=now;var dt=now-lastFrame;lastFrame=now;
-    S.frame++;updateCountdown();
-    if(deathT>0){deathT--;if(deathT===0)finishDeath()}
-    if(S.levelHold>0)S.levelHold-=dt;
-    if(levelBanner){levelBanner.t++;if(levelBanner.t>=levelBanner.T){levelBanner=null}else{levelBanner.a=levelBanner.t/levelBanner.T}}
-    cloudX=(cloudX+dt*.02*(S.inGame&&!S.over?1.6:.7))%W;
-    for(var i=fallers.length-1;i>=0;i--){var fl=fallers[i];fl.t++;if(fl.t>=fl.T){fallers.splice(i,1);continue}var k=fl.t/fl.T;fl.x+=fl.vx/60;fl.y+=(k<.5?-.4:.6)*3;fl.rot+=fl.vr;if(k>.5)fl.alpha=1-(k-.5)*2}
-    render();requestAnimationFrame(tick);
+  // ------------------------------------------------------------------
+  function updateCountdown() {
+    if (!S.playing || S.over || !S.ready) return;
+    if (performance.now() >= S.deadline) doDeath(S.side);
   }
 
+  // ------------------------------------------------------------------
   // Render
-  function render(){
-    var g=ctx;
-    // sky
-    g.fillStyle='#C7F0F9';g.fillRect(0,0,W,H);
-    // clouds
-    var clw=ASSETS.bg_clouds.w;
-    for(var cx=(-clw+(cloudX%clw));cx<W;cx+=clw)spr('bg_clouds',g,cx,15);
-    // bg trees
-    var btw=ASSETS.bg_trees.w;
-    for(var bx=(-btw+(cloudX*.35%btw));bx<W;bx+=btw)spr('bg_trees',g,bx,H-140);
-    // bg bottom
-    var bbw=ASSETS.bg_bottom.w;
-    for(var bb=(-bbw+(cloudX*.55%bbw));bb<W;bb+=bbw)spr('bg_bottom',g,bb,H-130);
-    // ground: left slab + right slab + solid fill
-    spr('ground_left',g,0,GROUND_Y);
-    spr('ground_right',g,W-GROUND_RIGHT_W,GROUND_Y);
-    var gapW=W-GROUND_BG_X-GROUND_RIGHT_W;
-    g.fillStyle='#AEDD7F';g.fillRect(GROUND_BG_X,GROUND_Y,gapW,38);
-    g.fillStyle='#91664A';g.fillRect(GROUND_BG_X,GROUND_Y+38,gapW,57);
-    // trunk (static)
-    var trunkTop=STUMP_Y-TRUNK_H;
-    for(var ty=trunkTop;ty>-TRUNK_H;ty-=TRUNK_H)spr('trunk',g,W/2-TRUNK_W/2,ty);
-    // stump
-    spr('stumb',g,STUMP_X,STUMP_Y);
-    // branches
-    for(var i=0;i<branches.length;i++){var br=branches[i];var by=br.y+S.drop;if(by>-BRANCH_H&&by<STUMP_Y+20){if(br.side<0)spr('branch',g,W/2-TRUNK_W/2-BRANCH_W+15,by-BRANCH_H,true);else spr('branch',g,W/2+TRUNK_W/2-15,by-BRANCH_H)}}
-    // falling pieces
-    for(var f=0;f<fallers.length;f++){var fl=fallers[f];g.save();g.globalAlpha=Math.max(0,Math.min(1,fl.alpha));g.translate(fl.x,fl.y);g.rotate(fl.rot);g.scale(fl.side<0?-1:1,1);spr(fl.kind==='branch'?'branch':'log',g,-62,-40);g.restore()}
-    // player
-    if(S.ready&&!S.over){var px=W/2+(S.side<0?-PLAYER_DX:PLAYER_DX);var flip=S.side>0;var bodyX=px;var bodyY=PLAYER_FEET_Y-107;spr('lumber_body',g,bodyX,bodyY,flip);var recent=(S.frame-handAnimAt)<6&&S.started;if(recent)spr('hand_up',g,bodyX+(flip?6:26),bodyY-55,flip);else spr('hand_down',g,bodyX+(flip?8:28),bodyY-52,flip)}
-    if(S.over)spr('lumber_died',g,W/2-35,PLAYER_FEET_Y-85,S.side>0);
-    // HUD
-    drawHud(g);
+  // ------------------------------------------------------------------
+  function render(now) {
+    var g = ctx;
+    var isGreet = !S.started;
+    var isPlaying = !S.over && S.started;
+    var isResult = S.over && S.started; // after death
+    // On initial load S.over=true & !started → greet scene (original h=true, Z=false)
+
+    // Clear with renderer bg #D3F7FF
+    g.fillStyle = '#d3f7ff';
+    g.fillRect(0, 0, W, H);
+
+    // O: bg_trees full canvas, tilePos (-13, H-52)
+    drawTiled('bg_trees', 0, 0, W, H, -13, L.bgTreesTileY);
+
+    // P: bg_bottom y=H-130 h=90, tilePos.x=-13
+    drawTiled('bg_bottom', 0, L.bgBottomY, W, 90, -13, 0);
+
+    // E: bg_clouds y=15 h=128, tilePos.x = S.cloudX (animated)
+    drawTiled('bg_clouds', 0, 15, W, 128, S.cloudX, 0);
+
+    // Ground: middle strip + left + right
+    drawTiled('ground_bg', L.groundMidX, L.groundY, L.groundMidW, 95, 0, 0);
+    drawSprite('ground_left', 0, L.groundY, 140, 95);
+    drawSprite('ground_right', L.groundRightX, L.groundY, 195, 95);
+
+    // Stones (always on main in original - L)
+    drawSprite('stones', L.stonesX, L.stonesY, 75, 36);
+
+    // Trunk (only when !over i.e. playing — v.visible=!h)
+    if (!S.over) {
+      // v: x centered, y=0, height=H-45, tileScale 0.5, tilePos.y=25+W
+      drawTiled('trunk', L.trunkX, 0, 50, L.trunkH, 0, 25 + S.dropW);
+    }
+
+    // Stump (only when over — z.visible=!!h)
+    if (S.over) {
+      drawSprite('stumb', L.stumpX, L.stumpY, 50, 60);
+    }
+
+    // Branches (only when !over — u.visible=!h)
+    if (!S.over) {
+      var uY = L.playerFeetY + S.dropW; // u.y = f-55+W
+      for (var i = 0; i < branches.length; i++) {
+        var br = branches[i];
+        var by = uY + br.yRel + br.ox; // anchor bottom-left at yRel
+        var bx = L.branchCX + br.xRel;
+        if (by > -80 && by < H + 20) {
+          // left side: sprite flipped, connector attaches at trunk edge
+          if (br.side < 0) {
+            // right edge of branch near trunk left edge
+            drawSprite('branch', bx - 125 + 15, by - 80, 125, 80, true);
+          } else {
+            drawSprite('branch', bx - 15, by - 80, 125, 80, false);
+          }
+        }
+      }
+    }
+
+    // Falling pieces
+    for (var f = 0; f < fallers.length; f++) {
+      var fl = fallers[f];
+      g.save();
+      g.globalAlpha = Math.max(0, Math.min(1, fl.alpha));
+      g.translate(fl.x, fl.y);
+      g.rotate(fl.rot);
+      // single mirror via side
+      if (fl.side < 0) {
+        g.scale(-1, 1);
+        drawSprite(fl.kind === 'branch' ? 'branch' : 'log', -62 + 15, -40, fl.kind === 'branch' ? 125 : 50, fl.kind === 'branch' ? 80 : 50, false);
+      } else {
+        drawSprite(fl.kind === 'branch' ? 'branch' : 'log', -15, -40, fl.kind === 'branch' ? 125 : 50, fl.kind === 'branch' ? 80 : 50, false);
+      }
+      g.restore();
+    }
+
+    // Player
+    var px = W / 2 + (S.side ? -35 : 35); // y.x
+    var py = L.playerFeetY;
+    var flip = S.side; // D(y,m): flip when left
+    var showDead = S.over && S.started; // after death
+    var showAlive = !S.over; // playing or greet
+
+    if (showAlive) {
+      // body anchor bottom-left at (px, py)
+      drawSprite('lumber_body', px, py - 107, 50, 107, flip);
+      // hands relative to player container
+      var handUp = !(S.handAnimUntil > now);
+      if (handUp) {
+        // I: x=21, y=-57, anchor(0,1), 47×52 — relative before flip
+        if (flip) {
+          // flipped: x measured from right of container origin... Pixi flip is scale.x=-1 around origin
+          // origin at (px,py); flipped sprite occupies x from px-21-47? Actually with scale -1, child x maps to -x
+          // hand at local x=21 → world px-21, and width extends left
+          drawSprite('hand_up', px - 21 - 47, py - 57 - 52, 47, 52, true);
+        } else {
+          drawSprite('hand_up', px + 21, py - 57 - 52, 47, 52, false);
+        }
+      } else {
+        // H: x=29, y=-58, anchor(1,1), 59×9 — right-bottom anchor
+        if (flip) {
+          drawSprite('hand_down', px - 29, py - 58 - 9, 59, 9, true);
+        } else {
+          drawSprite('hand_down', px + 29 - 59, py - 58 - 9, 59, 9, false);
+        }
+      }
+    } else if (showDead) {
+      var wx = W / 2 + (S.side ? -32 : 32);
+      drawSprite('lumber_died', wx, py - 85, 73, 85, S.side);
+    }
+
+    // Timeline + score + level (only when !over)
+    if (!S.over) {
+      drawTimeline();
+      drawText(String(S.score), W / 2, L.scoreY, 'bold 20px Charter, Georgia, serif', '#ffffff', '#886332', 1);
+      if (levelBanner) {
+        levelBanner.t++;
+        levelBanner.a = levelBanner.t < levelBanner.T / 2
+          ? levelBanner.t / (levelBanner.T / 2)
+          : Math.max(0, 1 - (levelBanner.t - levelBanner.T / 2) / (levelBanner.T / 2));
+        if (levelBanner.t >= levelBanner.T) levelBanner = null;
+        else {
+          g.save();
+          g.globalAlpha = Math.min(1, levelBanner.a);
+          drawText('Level ' + S.level, W / 2, L.levelY, 'bold 24px Charter, Georgia, serif', '#ffffff', '#886332', 0.8);
+          g.restore();
+        }
+      }
+    }
   }
 
-  var handAnimAt=0;
-
-  function drawHud(g){
-    drawText(String(S.score),W/2,30,'bold 20px Charter, Georgia, serif','#FFFFFF','#886332');
-    if(S.levelHold>0||levelBanner){var a=levelBanner?levelBanner.a:1;g.globalAlpha=Math.min(1,a);drawText('Level '+S.level,W/2,56,'bold 24px Charter, Georgia, serif','#FFFFFF','#886332');g.globalAlpha=1}
-    if(S.cdStarted&&!S.over){var frac=S.deadline?Math.max(0,Math.min(1,(S.deadline-performance.now())/S.qa)):1;drawTimeline(frac)}
+  function drawTimeline() {
+    var frac = 1;
+    if (S.deadline) {
+      frac = (S.deadline - performance.now()) / S.qa;
+      if (frac < 0) frac = 0;
+      if (frac > 1) frac = 1;
+    }
+    var ax = L.timelineX, ay = L.timelineY;
+    // Graphics rect (-3,-3,94,15) white then black mask region — approximate with bar clip
+    var bx = ax - 88; // ea.x = -88 relative, plus mask; bar drawn from left of track
+    // track: timeline sprite at (-6,-6) size 100×21
+    drawSprite('timeline', ax - 6, ay - 6, 100, 21);
+    // bar width 88 * frac, clipped to (-3,-3,94,15) local → (ax-3, ay-3, 94, 15)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ax - 3, ay - 3, 94, 15);
+    ctx.clip();
+    var warn = frac < WARN_FRAC;
+    if (warn) {
+      warnBlink++;
+      var key = (warnBlink % 14 < 7) ? 'timeline_warn' : 'timeline_bar';
+      // ea.x = -88*(1-frac) shifts bar; visible portion grows from right
+      var barX = ax + (-88 * (1 - frac));
+      drawSprite(key, barX, ay, 88, 9);
+    } else {
+      var barX2 = ax + (-88 * (1 - frac));
+      drawSprite('timeline_bar', barX2, ay, 88, 9);
+    }
+    ctx.restore();
   }
-  function drawTimeline(frac){var g=ctx;var bx=W/2-110,by=12;spr('timeline',g,bx-2,by-3);var warn=frac<WARN_FRAC;if(warn){warnBlink++;spr(warnBlink%14<7?'timeline_warn':'timeline_bar',g,bx+6,by+4)}else spr('timeline_bar',g,bx+6,by+4)}
-  function drawText(txt,x,y,font,fill,shadow){var g=ctx;g.font=font;g.textAlign='center';g.textBaseline='top';g.fillStyle=shadow;g.fillText(txt,x+2,y+2);g.fillStyle=fill;g.fillText(txt,x,y)}
 
-  // Resize — match reference: canvas fills above footer
-  function resize(){
-    var maxW=Math.min(600,window.innerWidth);
-    var footerH=window.innerHeight<=570?188:228;
-    var availH=window.innerHeight-footerH;
-    var scale=Math.min(maxW/W,availH/H);
-    canvas.style.width=Math.floor(W*scale)+'px';
-    canvas.style.height=Math.floor(H*scale)+'px';
-    canvas.width=W;canvas.height=H;
+  // ------------------------------------------------------------------
+  // Loop
+  // ------------------------------------------------------------------
+  function tick(now) {
+    if (!lastFrame) lastFrame = now;
+    var dt = now - lastFrame;
+    lastFrame = now;
+    S.frame++;
+
+    updateCountdown();
+
+    // clouds drift: E.tilePosition.x -= 0.25 per frame (original uses ticker not dt)
+    S.cloudX -= 0.25;
+    if (S.cloudX < -475) S.cloudX += 475;
+
+    // fallers
+    for (var i = fallers.length - 1; i >= 0; i--) {
+      var fl = fallers[i];
+      fl.t++;
+      if (fl.t >= fl.T) { fallers.splice(i, 1); continue; }
+      var k = fl.t / fl.T;
+      fl.x += fl.vx / 60;
+      fl.y += (k < 0.5 ? -0.4 : 0.6) * 3;
+      fl.rot += fl.vr;
+      if (k > 0.5) fl.alpha = 1 - (k - 0.5) * 2;
+    }
+
+    render(now);
+    requestAnimationFrame(tick);
   }
 
+  // ------------------------------------------------------------------
+  // Input
+  // ------------------------------------------------------------------
+  function onLeft(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (!S.ready) return;
+    if (!S.started || S.over) {
+      // play / restart via left button
+      if (!S.started || (S.over && S.started)) startGame();
+      return;
+    }
+    chop(true);
+  }
+  function onRight(e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (!S.ready || !S.playing || S.over) return;
+    chop(false);
+  }
+
+  btnLeft.addEventListener('click', onLeft);
+  btnRight.addEventListener('click', onRight);
+  btnLeft.addEventListener('touchstart', function (e) { e.preventDefault(); onLeft(e); }, { passive: false });
+  btnRight.addEventListener('touchstart', function (e) { e.preventDefault(); onRight(e); }, { passive: false });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') {
+      if (S.playing && !S.over) { e.preventDefault(); chop(true); }
+      else if (!S.started) { e.preventDefault(); startGame(); }
+    } else if (e.key === 'ArrowRight') {
+      if (S.playing && !S.over) { e.preventDefault(); chop(false); }
+    } else if (e.key === ' ' || e.key === 'Enter') {
+      if (!S.started || S.over) { e.preventDefault(); startGame(); }
+    }
+  });
+
+  scoreShareEl.addEventListener('click', function (e) {
+    e.stopPropagation();
+    var t = 'I scored ' + S.score + ' in LumberJack on Goldutya!';
+    if (navigator.share) navigator.share({ text: t }).catch(function () {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(t).catch(function () {});
+  });
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () {
+    setTimeout(resize, 100);
+  });
+
+  // ------------------------------------------------------------------
   // Boot
-  loadAll(function(){resize();window.addEventListener('resize',resize);window.addEventListener('orientationchange',resize);S.ready=true;seedTree();renderLeaderboard();if(typeof Difficulty!=='undefined')Difficulty.renderPicker(diffPicker,'lumberjack',function(){if(typeof TG!=='undefined')TG.haptic('light')});showOverlay();requestAnimationFrame(tick)});
+  // ------------------------------------------------------------------
+  resize();
+  loadAll(function () {
+    S.ready = true;
+    S.started = false;
+    S.over = true; // greet shows result-scene (ground+stump+player) per original
+    seedQueue();
+    setStateClasses();
+    renderTable(loadScores());
+    // ready class → footer fades in
+    requestAnimationFrame(tick);
+  });
 })();
