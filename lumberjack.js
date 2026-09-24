@@ -23,7 +23,7 @@
   var STUMP_X = W / 2 - 25;       // 350
   var STUMP_Y = H - 105;          // 467
   var PLAYER_FEET_Y = H - 55;     // 517
-  var PLAYER_DX = 35;
+  var PLAYER_DX = 55;
 
   // ------------------------------------------------------------------
   // DOM refs
@@ -535,13 +535,14 @@
       spr('bg_bottom', g, bb, H - 130);
     }
 
-    // ground: left + right slabs, dirt tiling in trunk gap
+    // ground: left slab + right slab + solid dirt fill in gap (no SVG tiling lines)
     spr('ground_left', g, 0, GROUND_Y);
     spr('ground_right', g, W - GROUND_RIGHT_W, GROUND_Y);
-    var tileW = ASSETS.ground_bg.w;
-    for (var gx = GROUND_BG_X; gx < W - GROUND_RIGHT_W; gx += tileW) {
-      spr('ground_bg', g, gx, GROUND_Y);
-    }
+    // dirt fill in trunk gap (matches ground_bg colors)
+    g.fillStyle = '#91664A';
+    g.fillRect(GROUND_BG_X, GROUND_Y + 38, W - GROUND_BG_X - GROUND_RIGHT_W, 57);
+    g.fillStyle = '#AEDD7F';
+    g.fillRect(GROUND_BG_X, GROUND_Y, W - GROUND_BG_X - GROUND_RIGHT_W, 38);
 
     // stones (removed per user)
 
@@ -559,8 +560,8 @@
       var br = branches[i];
       var by = br.y + S.drop;
       if (by > -BRANCH_H && by < STUMP_Y + 20) {
-        if (br.side < 0) spr('branch', g, W / 2 - BRANCH_W + 12, by - BRANCH_H, true);
-        else spr('branch', g, W / 2 - 12, by - BRANCH_H);
+        if (br.side < 0) spr('branch', g, W / 2 - TRUNK_W / 2 - BRANCH_W + 15, by - BRANCH_H, true);
+        else spr('branch', g, W / 2 + TRUNK_W / 2 - 15, by - BRANCH_H);
       }
     }
 
@@ -572,27 +573,24 @@
       g.translate(fl.x, fl.y);
       g.rotate(fl.rot);
       g.scale(fl.side < 0 ? -1 : 1, 1);
-      fl.kind === 'branch' ? spr('branch', g, -BRANCH_W / 2, -BRANCH_H / 2, fl.vx > 0) : spr('log', g, -25, -25);
+      spr(fl.kind === 'branch' ? 'branch' : 'log', g, -62, -40);
       g.restore();
     }
 
-    // player (when started or in game)
-    if (S.started) {
+    // player (always visible when game has loaded)
+    if (S.ready && !S.over) {
       var px = W / 2 + (S.side < 0 ? -PLAYER_DX : PLAYER_DX);
-      if (S.over) {
-        // dead sprite
-        spr('lumber_died', g, W / 2 - (S.side < 0 ? 37 : 36) - 36, PLAYER_FEET_Y - 85, S.side > 0);
-      } else {
-        var flip = S.side < 0;
-        var bodyX = px;
-        var bodyY = PLAYER_FEET_Y - 107;
-        spr('lumber_body', g, bodyX, bodyY, flip);
-        // hand: up when recent chop, else down
-        var recent = S.frame - handAnimAt < 6 ? 1 : 0;
-        // draw hand_up spike briefly after each chop
-        if (recent) spr('hand_up', g, bodyX + (flip ? 6 : 22), bodyY - 55, flip);
-        else spr('hand_down', g, bodyX + (flip ? 8 : 26), bodyY - 52, flip);
-      }
+      var flip = S.side > 0;
+      var bodyX = px;
+      var bodyY = PLAYER_FEET_Y - 107;
+      spr('lumber_body', g, bodyX, bodyY, flip);
+      var recent = (S.frame - handAnimAt) < 6 && S.started;
+      if (recent) spr('hand_up', g, bodyX + (flip ? 6 : 26), bodyY - 55, flip);
+      else spr('hand_down', g, bodyX + (flip ? 8 : 28), bodyY - 52, flip);
+    }
+    // dead player
+    if (S.over) {
+      spr('lumber_died', g, W / 2 - 35, PLAYER_FEET_Y - 85, S.side > 0);
     }
 
     // HUD
