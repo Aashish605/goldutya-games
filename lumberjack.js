@@ -270,8 +270,13 @@
   function saveScores(list) {
     try { localStorage.setItem(BEST_KEY, JSON.stringify(list)); } catch (e) {}
   }
+  function hadPriorScores() {
+    try { return JSON.parse(localStorage.getItem(BEST_KEY) || '[]').length > 0; }
+    catch (e) { return false; }
+  }
   function submitScore() {
     if (!S.started) return;
+    var prior = hadPriorScores();
     var list = loadScores();
     list.push({ name: 'You', score: S.score, current: true });
     list.sort(function (a, b) { return b.score - a.score; });
@@ -283,8 +288,10 @@
       if (r.current) { if (seen) r.current = false; else seen = true; }
     });
     saveScores(list);
-    renderTable(list);
-    scoreShareEl.classList.add('shown');
+    // Match reference: Share stays hidden (Telegram-only in original);
+    // leaderboard opens only when prior scores exist (server-driven in original)
+    if (prior) renderTable(list);
+    else tableWrapEl.classList.remove('opened');
   }
   function renderTable(list) {
     if (list === false || !list) { tableWrapEl.classList.remove('opened'); return; }
@@ -353,10 +360,10 @@
     levelBanner = null;
     fallers = [];
     scoreShareEl.classList.remove('shown');
+    tableWrapEl.classList.remove('opened');
     seedQueue();
     updateScoreText();
     setStateClasses();
-    renderTable(loadScores());
   }
 
   function doDeath(fromLeft) {
@@ -731,8 +738,8 @@
     S.over = true; // greet shows result-scene (ground+stump+player) per original
     seedQueue();
     setStateClasses();
-    renderTable(loadScores());
-    // ready class → footer fades in
+    // greet: empty table like reference first visit
+    tableWrapEl.classList.remove('opened');
     requestAnimationFrame(tick);
   });
 })();
