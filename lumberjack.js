@@ -327,22 +327,20 @@
     S.queue = [0, 0];
     S.pa = 100;
     branches = [];
-    var yRel = -S.pa; // relative to container u (at player feet)
-    // Fill to 11 entries like original
+    // Fill to 11+ like original for(;11>da.length;) — ends length 12
     while (S.queue.length < 11) {
       var left = Math.random() < 0.5;
       var side = left ? -1 : 1;
       S.queue.push(side, side * 2);
       S.pa += 100;
       branches.push({
-        side: side,          // -1 left, 1 right
-        type: 2,             // branch (obstacle)
-        yRel: -S.pa,         // relative to u.y (player feet)
+        side: side,
+        type: 2,
+        yRel: -S.pa,
         xRel: left ? -10 : 10,
-        ox: 0                // fall offset
+        ox: 0
       });
     }
-    // recompute yRel on first branch for initial layout - actually push created them already
   }
 
   function startGame() {
@@ -386,29 +384,53 @@
   }
 
   // ------------------------------------------------------------------
-  // Chop
+  // Chop — matches original $a / Ca
   // ------------------------------------------------------------------
+  function applyFreeChop(left) {
+    // $a: if da.length odd, push pair first; then shift
+    if (S.queue.length % 2 === 1) pushPair();
+    var d = S.queue.shift();
+    if (d === undefined) d = 0;
+
+    // spawn falling piece: abs(d)==2 → branch (and remove lowest visual), else log
+    if (Math.abs(d) === 2) {
+      if (branches.length) branches.shift();
+      spawnFalling('branch', left);
+    } else {
+      spawnFalling('log', left);
+    }
+
+    S.dropW += 50;
+  }
+
   function chop(left) {
     if (!S.playing || S.over || !S.ready) return;
     setSide(left);
-    var d = S.queue.shift();
-    if (S.queue.length % 2 === 1) pushPair();
 
-    if (d !== 0) {
-      var obsLeft = d < 0;
-      if (obsLeft === left) {
-        // hit branch
-        spawnFalling(Math.abs(d) === 2 ? 'branch' : 'log', obsLeft);
-        sfxBranch();
-        doDeath(left);
-        return;
+    // Ca: peek da[0] — do not shift until free path (or abs==1 death uses $a)
+    var b = S.queue.length ? S.queue[0] : 0;
+    var hit = b !== 0 && left === (b < 0);
+
+    if (hit) {
+      // death toward obstacle side
+      if (Math.abs(b) === 1) {
+        // original: $a(a, true) — shift/push/scroll but no fall from $a; Va() after
+        if (S.queue.length % 2 === 1) pushPair();
+        S.queue.shift();
+        S.dropW += 50;
       }
+      // abs==2: original does not shift on death
+      spawnFalling(Math.abs(b) === 2 ? 'branch' : 'log', b < 0);
+      sfxBranch();
+      doDeath(left);
+      return;
     }
 
     // free chop
-    S.score++;
+    applyFreeChop(left);
     S.handAnimUntil = performance.now() + 50;
     S.deadline = Math.min(S.deadline + S.ga, performance.now() + S.qa);
+    S.score++;
     sfxChop(); sfxThud();
 
     if (S.score % LEVEL_EVERY === 0) {
@@ -417,15 +439,6 @@
       S.ga *= LEVEL_FACTOR;
       levelBanner = { t: 0, T: 120, a: 0 };
     }
-
-    // spawn falling piece from chopped segment
-    if (d !== 0) spawnFalling(Math.abs(d) === 2 ? 'branch' : 'log', d < 0);
-    // scroll branch container down 50
-    S.dropW += 50;
-    // remove lowest branch sprite that scrolled past
-    if (branches.length) branches.shift();
-    // re-seed branch visual for new top branch
-    if (S.queue.length < 6) pushBranchSprite();
   }
 
   function pushPair() {
@@ -437,19 +450,11 @@
   }
 
   function pushBranchSprite(side, left) {
-    if (side == null) {
-      left = Math.random() < 0.5;
-      side = left ? -1 : 1;
-    }
-    // place one viewport-worth above lowest
-    var minRel = 0;
-    for (var i = 0; i < branches.length; i++) {
-      if (branches[i].yRel < minRel) minRel = branches[i].yRel;
-    }
+    if (side == null) return;
     branches.push({
       side: side,
       type: 2,
-      yRel: minRel - 100,
+      yRel: -S.pa,
       xRel: left ? -10 : 10,
       ox: 0
     });
@@ -557,39 +562,41 @@
       g.restore();
     }
 
-    // Player
-    var px = W / 2 + (S.side ? -35 : 35); // y.x
+    // Player — container origin at W/2±35; body anchor bottom-left extends
+    // right when facing right, LEFT when flipped (scale.x=-1 around origin)
+    var originX = W / 2 + (S.side ? -35 : 35);
     var py = L.playerFeetY;
-    var flip = S.side; // D(y,m): flip when left
-    var showDead = S.over && S.started; // after death
-    var showAlive = !S.over; // playing or greet
+    var flip = S.side;
+    var showDead = S.over && S.started;
+    var showAlive = !S.over;
 
     if (showAlive) {
-      // body anchor bottom-left at (px, py)
-      drawSprite('lumber_body', px, py - 107, 50, 107, flip);
-      // hands relative to player container
+      // body: unflipped [origin, origin+50]; flipped [origin-50, origin]
+      var bodyX = flip ? originX - 50 : originX;
+      drawSprite('lumber_body', bodyX, py - 107, 50, 107, flip);
+      // hands relative to container origin (matches Pixi children)
       var handUp = !(S.handAnimUntil > now);
       if (handUp) {
-        // I: x=21, y=-57, anchor(0,1), 47×52 — relative before flip
+        // I: x=21, y=-57, anchor(0,1), 47×52
         if (flip) {
-          // flipped: x measured from right of container origin... Pixi flip is scale.x=-1 around origin
-          // origin at (px,py); flipped sprite occupies x from px-21-47? Actually with scale -1, child x maps to -x
-          // hand at local x=21 → world px-21, and width extends left
-          drawSprite('hand_up', px - 21 - 47, py - 57 - 52, 47, 52, true);
+          // local x=21..68 → world origin-68..origin-21
+          drawSprite('hand_up', originX - 68, py - 109, 47, 52, true);
         } else {
-          drawSprite('hand_up', px + 21, py - 57 - 52, 47, 52, false);
+          drawSprite('hand_up', originX + 21, py - 109, 47, 52, false);
         }
       } else {
-        // H: x=29, y=-58, anchor(1,1), 59×9 — right-bottom anchor
+        // H: x=29, y=-58, anchor(1,1), 59×9 → local x=-30..29
         if (flip) {
-          drawSprite('hand_down', px - 29, py - 58 - 9, 59, 9, true);
+          drawSprite('hand_down', originX - 29, py - 67, 59, 9, true);
         } else {
-          drawSprite('hand_down', px + 29 - 59, py - 58 - 9, 59, 9, false);
+          drawSprite('hand_down', originX - 30, py - 67, 59, 9, false);
         }
       }
     } else if (showDead) {
+      // w: x=W/2±32, anchor(0,1), flip extends left
       var wx = W / 2 + (S.side ? -32 : 32);
-      drawSprite('lumber_died', wx, py - 85, 73, 85, S.side);
+      var deadX = S.side ? wx - 73 : wx;
+      drawSprite('lumber_died', deadX, py - 85, 73, 85, S.side);
     }
 
     // Timeline + score + level (only when !over)
@@ -693,7 +700,12 @@
   // Expose for Playwright diagnostics
   window.__lj = {
     state: function () {
-      return { started: S.started, over: S.over, playing: S.playing, ready: S.ready, score: S.score, queue: S.queue.slice(0, 6) };
+      return {
+        started: S.started, over: S.over, playing: S.playing, ready: S.ready,
+        score: S.score, queue: S.queue.slice(0, 8),
+        dropW: S.dropW, pa: S.pa, side: S.side,
+        branches: branches.map(function (b) { return { side: b.side, yRel: b.yRel, xRel: b.xRel }; })
+      };
     },
     chop: chop,
     start: startGame
