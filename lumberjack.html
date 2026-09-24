@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="lumberjack.css">
+<link rel="stylesheet" href="leaderboard.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🪓%3C/text%3E%3C/svg%3E">
 </head>
 <body>
@@ -21,14 +22,15 @@
       <div id="table_content" class="table_content">
         <div class="game_title">LumberJack</div>
         <div class="result_score">
-          <div>You scored</div>
+          <div id="score_label">You scored</div>
           <div id="score_value" class="score_value"></div>
           <div class="score_share_wrap">
             <div id="score_share" class="score_share">Share</div>
           </div>
         </div>
+        <div id="best_score" class="best_score_line">BEST <b id="best">0</b></div>
         <div id="table_wrap" class="table_wrap">
-          <ul id="table" class="table"></ul>
+          <div id="leaderboard" class="lb-container"></div>
         </div>
       </div>
     </div>
@@ -63,8 +65,11 @@
   <a href="memory.html">MEMORY</a>
   <a href="breakout.html">BREAKOUT</a>
   <a href="snake.html">SNAKE</a>
+  <a href="lumberjack.html">LUMBERJACK</a>
 </nav>
 
+<script src="telegram.js"></script>
+<script src="leaderboard.js"></script>
 <script src="lumberjack.js"></script>
 </body>
 </html>

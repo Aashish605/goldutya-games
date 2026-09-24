@@ -42,8 +42,10 @@
   var canvasWrap = document.getElementById('canvas_wrap');
   var scoreValueEl = document.getElementById('score_value');
   var scoreShareEl = document.getElementById('score_share');
-  var tableEl = document.getElementById('table');
   var tableWrapEl = document.getElementById('table_wrap');
+  var scoreLabelEl = document.getElementById('score_label');
+  var bestEl = document.getElementById('best');
+  var lbContainer = document.getElementById('leaderboard');
   var btnLeft = document.getElementById('btnLeft');
   var btnRight = document.getElementById('btnRight');
 
@@ -54,8 +56,6 @@
   canvas.style.height = H + 'px';
   canvasWrap.appendChild(canvas);
   var ctx = canvas.getContext('2d');
-
-  var BEST_KEY = 'lumberjack.scores';
 
   // ------------------------------------------------------------------
   // State (mirrors original: Z=started, h=over/idle-result, aa=playing)
@@ -261,54 +261,48 @@
   }
 
   // ------------------------------------------------------------------
-  // Leaderboard
+  // Score (single person + Telegram name, like other Goldutya games)
   // ------------------------------------------------------------------
-  function loadScores() {
-    try { return JSON.parse(localStorage.getItem(BEST_KEY) || '[]'); }
-    catch (e) { return []; }
+  function getBest() {
+    try { return Number(localStorage.getItem('goldutya-lumberjack-best') || 0); }
+    catch (e) { return 0; }
   }
-  function saveScores(list) {
-    try { localStorage.setItem(BEST_KEY, JSON.stringify(list)); } catch (e) {}
+  function saveBest(n) {
+    try { localStorage.setItem('goldutya-lumberjack-best', String(n)); } catch (e) {}
   }
-  function hadPriorScores() {
-    try { return JSON.parse(localStorage.getItem(BEST_KEY) || '[]').length > 0; }
-    catch (e) { return false; }
+  function playerName() {
+    if (typeof TG !== 'undefined' && TG.user) {
+      var u = TG.user();
+      if (u) return u.username || u.firstName || 'Anonymous';
+    }
+    try { return localStorage.getItem('goldutya-player-name') || 'Anonymous'; }
+    catch (e) { return 'Anonymous'; }
+  }
+  function updateBestText() {
+    if (bestEl) bestEl.textContent = String(getBest());
   }
   function submitScore() {
     if (!S.started) return;
-    var prior = hadPriorScores();
-    var list = loadScores();
-    list.push({ name: 'You', score: S.score, current: true });
-    list.sort(function (a, b) { return b.score - a.score; });
-    list = list.slice(0, 10);
-    list.forEach(function (r, i) { r.pos = i + 1; r.current = r.name === 'You' && r.score === S.score; });
-    // keep only one current
-    var seen = false;
-    list.forEach(function (r) {
-      if (r.current) { if (seen) r.current = false; else seen = true; }
-    });
-    saveScores(list);
-    // Match reference: Share stays hidden (Telegram-only in original);
-    // leaderboard opens only when prior scores exist (server-driven in original)
-    if (prior) renderTable(list);
-    else tableWrapEl.classList.remove('opened');
-  }
-  function renderTable(list) {
-    if (list === false || !list) { tableWrapEl.classList.remove('opened'); return; }
-    if (!list.length) { tableWrapEl.classList.remove('opened'); return; }
-    var html = '';
-    for (var i = 0; i < list.length; i++) {
-      var b = list[i];
-      html += '<li class="row' + (b.current ? ' you' : '') + '"><span class="place">' + (b.pos || (i + 1)) +
-        '.</span><span class="score">' + b.score + '</span><div class="name">' + escapeHtml(b.name) + '</div></li>';
+    var score = S.score;
+    var best = getBest();
+    if (score > best) {
+      saveBest(score);
+      best = score;
     }
-    tableEl.innerHTML = html;
-    tableWrapEl.classList.add('opened');
-  }
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
+    updateBestText();
+
+    // single score line: Telegram name + this run's score
+    var name = playerName();
+    if (scoreLabelEl) scoreLabelEl.textContent = name + ' scored';
+
+    // shared Leaderboard (one score per user, TG name) — like other games
+    if (typeof Leaderboard !== 'undefined') {
+      if (score > 0) Leaderboard.addScore('lumberjack', score, {});
+      if (lbContainer) Leaderboard.renderBoard(lbContainer, 'lumberjack', score);
+      tableWrapEl.classList.add('opened');
+    } else {
+      tableWrapEl.classList.remove('opened');
+    }
   }
 
   // ------------------------------------------------------------------
@@ -772,6 +766,7 @@
   // Boot
   // ------------------------------------------------------------------
   scoreValueEl.textContent = '0';
+  updateBestText();
   resize();
   loadAll(function () {
     S.ready = true;
@@ -779,7 +774,6 @@
     S.over = true; // greet shows result-scene (ground+stump+player) per original
     seedQueue();
     setStateClasses();
-    // greet: empty table like reference first visit
     tableWrapEl.classList.remove('opened');
     requestAnimationFrame(tick);
   });

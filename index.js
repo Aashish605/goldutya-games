@@ -5,6 +5,7 @@ const GAMES = [
   { id: "memory", name: "Goldutya Memory", file: "memory.html", cat: "puzzle", catLabel: "Puzzle", image: "assets/card-memory.png", bestKey: "goldutya-memory-best", badge: "POPULAR" },
   { id: "snake", name: "Goldutya Snake", file: "snake.html", cat: "classic", catLabel: "Classic", image: "assets/card-snake.png", bestKey: "goldutya-snake-best", badge: "CLASSIC" },
   { id: "breakout", name: "Goldutya Breakout", file: "breakout.html", cat: "action", catLabel: "Action", image: "assets/card-breakout.png", bestKey: "goldutya-breakout-best", badge: "HOT" },
+  { id: "lumberjack", name: "Goldutya LumberJack", file: "lumberjack.html", cat: "arcade", catLabel: "Arcade", image: "assets/lumberjack-body.jpg", bestKey: "goldutya-lumberjack-best", badge: "NEW" },
 ];
 
 const grid = document.getElementById("gameGrid");

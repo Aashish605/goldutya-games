@@ -94,6 +94,21 @@ body {
 }
 .in_greet .result_score { display: none; }
 
+.best_score_line {
+  display: none;
+  font-weight: 700;
+  font-size: 20px;
+  color: #4d4d4d;
+  letter-spacing: 2px;
+  padding: 0 20px 8px;
+}
+.in_result .best_score_line { display: block; }
+.best_score_line b {
+  color: #b8860b;
+  font-size: 28px;
+  margin-left: 6px;
+}
+
 .result_score .score_value,
 .result_score .score_value:after,
 .score_share,
