@@ -673,18 +673,24 @@
   function onLeft(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
     if (!S.ready) return;
-    if (!S.started || S.over) {
-      // play / restart via left button
-      if (!S.started || (S.over && S.started)) startGame();
-      return;
-    }
+    if (!S.started) { startGame(); return; }
+    if (S.over) { startGame(); return; }
     chop(true);
   }
   function onRight(e) {
     if (e) { e.preventDefault(); e.stopPropagation(); }
-    if (!S.ready || !S.playing || S.over) return;
+    if (!S.ready || !S.started || S.over) return;
     chop(false);
   }
+
+  // Expose for Playwright diagnostics
+  window.__lj = {
+    state: function () {
+      return { started: S.started, over: S.over, playing: S.playing, ready: S.ready, score: S.score, queue: S.queue.slice(0, 6) };
+    },
+    chop: chop,
+    start: startGame
+  };
 
   btnLeft.addEventListener('click', onLeft);
   btnRight.addEventListener('click', onRight);
@@ -717,6 +723,7 @@
   // ------------------------------------------------------------------
   // Boot
   // ------------------------------------------------------------------
+  scoreValueEl.textContent = '0';
   resize();
   loadAll(function () {
     S.ready = true;

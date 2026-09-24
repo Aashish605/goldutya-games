@@ -388,7 +388,7 @@ body {
 
 .loading .page_footer { opacity: 0; visibility: hidden; }
 
-/* Goldutya nav strip (below game, non-intrusive) */
+/* Goldutya nav — fixed overlay, does NOT shift game layout */
 .goldutya-nav {
   position: fixed;
   bottom: 0;
@@ -400,11 +400,12 @@ body {
   justify-content: center;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
-  background: rgba(11, 11, 13, 0.92);
+  padding: 4px 10px calc(4px + env(safe-area-inset-bottom));
+  background: rgba(11, 11, 13, 0.88);
   font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   letter-spacing: 1px;
+  pointer-events: auto;
 }
 .goldutya-nav a {
   color: #F5C518;
@@ -418,13 +419,4 @@ body {
   height: 1em;
   fill: currentColor;
   vertical-align: -0.1em;
-}
-/* Lift footer above nav when short screens — nav overlays page bottom */
-@media (min-height: 571px) {
-  .page_footer_wrap { bottom: 28px; }
-  .canvas_wrap { bottom: calc(228px + 28px); }
-}
-@media (max-height: 570px) and (min-height: 481px) {
-  .page_footer_wrap { bottom: 28px; }
-  .canvas_wrap { bottom: calc(188px + 28px); }
 }
