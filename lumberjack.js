@@ -325,9 +325,10 @@
   // ------------------------------------------------------------------
   function seedQueue() {
     S.queue = [0, 0];
-    S.pa = 100;
+    // Start pa=50 so first branch yRel=-150: at first obstacle check (dropW=100)
+    // worldY = 617+100-150 = 567 (body level), not 517 (head/above — unfair death)
+    S.pa = 50;
     branches = [];
-    // Fill to 11+ like original for(;11>da.length;) — ends length 12
     while (S.queue.length < 11) {
       var left = Math.random() < 0.5;
       var side = left ? -1 : 1;
@@ -573,20 +574,20 @@
       // body: unflipped [origin, origin+50]; flipped [origin-50, origin]
       var bodyX = flip ? originX - 50 : originX;
       drawSprite('lumber_body', bodyX, py - 107, 50, 107, flip);
-      // hands relative to container origin (matches Pixi children)
+      // hands: exact Pixi child math with parent scale.x=-1 when flipped
       var handUp = !(S.handAnimUntil > now);
       if (handUp) {
         // I: x=21, y=-57, anchor(0,1), 47×52
+        // flipped: world [origin-68, origin-21]
         if (flip) {
-          // local x=21..68 → world origin-68..origin-21 (axe clear of body)
-          drawSprite('hand_up', originX - 78, py - 109, 47, 52, true);
+          drawSprite('hand_up', originX - 68, py - 109, 47, 52, true);
         } else {
           drawSprite('hand_up', originX + 21, py - 109, 47, 52, false);
         }
       } else {
         // H: x=29, y=-58, anchor(1,1), 59×9 → local x=-30..29
         if (flip) {
-          drawSprite('hand_down', originX - 39, py - 67, 59, 9, true);
+          drawSprite('hand_down', originX - 29, py - 67, 59, 9, true);
         } else {
           drawSprite('hand_down', originX - 30, py - 67, 59, 9, false);
         }
