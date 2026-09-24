@@ -475,7 +475,7 @@
     return c;
   }
 
-  // cache sprites
+  // cache sprites (generated fallbacks, swapped after image load)
   var sprites = {
     trunk: spriteTrunk(),
     log: spriteLog(),
@@ -489,25 +489,134 @@
     deadR: spritePlayer(true),
     handDown: spriteHandDown(),
     bg: spriteBgTrees(),
-    cloud: spriteCloud()
+    cloud: spriteCloud(),
+    ground: spriteGround()
   };
+
+  var IMG = {
+    trunk: 'assets/tree-trunk.jpg',
+    log: 'assets/log.jpg',
+    branch: 'assets/branch.jpg',
+    stump: 'assets/stump.jpg',
+    stone: 'assets/stones.jpg',
+    player: 'assets/lumberjack-body.jpg',
+    dead: 'assets/lumberjack-dead.jpg',
+    hand: 'assets/axe-swing.jpg',
+    bg: 'assets/bg-tree.jpg',
+    cloud: 'assets/cloudes.jpg',
+    ground: 'assets/ground.jpg',
+    btnL: 'assets/btn-left.jpg',
+    btnR: 'assets/btn-right.jpg',
+    btnPlay: 'assets/btn-play.jpg',
+    btnRefresh: 'assets/btn-refresh.jpg'
+  };
+
+  function loadImg(src) {
+    return new Promise(function (resolve) {
+      var im = new Image();
+      im.onload = function () { resolve(im); };
+      im.onerror = function () { resolve(null); };
+      im.src = src;
+    });
+  }
+
+  function chromaKey(img, tw, th) {
+    if (!img) return null;
+    var c = makeCanvas(tw, th);
+    var g = c.getContext('2d');
+    g.imageSmoothingEnabled = true;
+    g.drawImage(img, 0, 0, tw, th);
+    var id = g.getImageData(0, 0, tw, th);
+    var d = id.data;
+    function samp(x, y) {
+      var i = (y * tw + x) * 4;
+      return [d[i], d[i + 1], d[i + 2]];
+    }
+    var c0 = samp(0, 0), c1 = samp(tw - 1, 0), c2 = samp(0, th - 1), c3 = samp(tw - 1, th - 1);
+    var kr = (c0[0] + c1[0] + c2[0] + c3[0]) / 4;
+    var kg = (c0[1] + c1[1] + c2[1] + c3[1]) / 4;
+    var kb = (c0[2] + c1[2] + c2[2] + c3[2]) / 4;
+    var thresh2 = 52 * 52;
+    for (var i = 0; i < d.length; i += 4) {
+      var dr = d[i] - kr, dg = d[i + 1] - kg, db = d[i + 2] - kb;
+      if (dr * dr + dg * dg + db * db < thresh2) d[i + 3] = 0;
+    }
+    g.putImageData(id, 0, 0);
+    return c;
+  }
+
+  function scaleCopy(img, tw, th) {
+    if (!img) return null;
+    var c = makeCanvas(tw, th);
+    var g = c.getContext('2d');
+    g.imageSmoothingEnabled = true;
+    g.drawImage(img, 0, 0, tw, th);
+    return c;
+  }
+
+  function flipH(src) {
+    if (!src) return src;
+    var c = makeCanvas(src.width, src.height);
+    var g = c.getContext('2d');
+    g.translate(src.width, 0);
+    g.scale(-1, 1);
+    g.drawImage(src, 0, 0);
+    return c;
+  }
+
+  function applyBtn(sel, canvas) {
+    if (!canvas) return;
+    var el = document.querySelector(sel);
+    if (!el) return;
+    el.style.backgroundImage = 'url(' + canvas.toDataURL('image/png') + ')';
+    el.style.backgroundSize = 'contain';
+    el.style.backgroundRepeat = 'no-repeat';
+    el.style.backgroundPosition = 'center';
+  }
+
+  function loadAssets(done) {
+    var keys = Object.keys(IMG);
+    Promise.all(keys.map(function (k) { return loadImg(IMG[k]); })).then(function (imgs) {
+      var map = {};
+      keys.forEach(function (k, i) { map[k] = imgs[i]; });
+      var t;
+      t = scaleCopy(map.trunk, TRUNK_W, TRUNK_H); if (t) sprites.trunk = t;
+      t = chromaKey(map.log, 50, 50); if (t) sprites.log = t;
+      t = chromaKey(map.branch, 125, 80);
+      if (t) { sprites.branchR = t; sprites.branchL = flipH(t); }
+      t = chromaKey(map.stump, 50, 60); if (t) sprites.stump = t;
+      t = chromaKey(map.stone, 75, 36); if (t) sprites.stone = t;
+      t = chromaKey(map.player, 50, 107);
+      if (t) { sprites.playerR = t; sprites.playerL = flipH(t); }
+      t = chromaKey(map.dead, 50, 107);
+      if (t) { sprites.deadR = t; sprites.deadL = flipH(t); }
+      t = chromaKey(map.hand, 59, 9); if (t) sprites.handDown = t;
+      t = scaleCopy(map.bg, 750, 260); if (t) sprites.bg = t;
+      t = chromaKey(map.cloud, 140, 128); if (t) sprites.cloud = t;
+      t = scaleCopy(map.ground, 750, 95); if (t) sprites.ground = t;
+      applyBtn('.button_left .icon', chromaKey(map.btnL, 60, 60));
+      applyBtn('.button_right .icon', chromaKey(map.btnR, 60, 60));
+      applyBtn('.button_left .icon_play', chromaKey(map.btnPlay, 60, 60));
+      applyBtn('.button_left .icon_refresh', chromaKey(map.btnRefresh, 60, 60));
+      done();
+    });
+  }
 
   // ------------------------------------------------------------------
   // Ground canvas rendering (result screen)
   // ------------------------------------------------------------------
   function renderGround() {
-    if (!g_ctx) {
-      g_ctx = makeCanvas(groundCanvas.width, groundCanvas.height);
-      var g = g_ctx.getContext('2d');
-      g.drawImage(sprites.bg, 0, 0);
-      var ground = spriteGround();
-      g.drawImage(ground, 0, 0);
-      // stones + stump centered on play area
+    g_ctx = makeCanvas(groundCanvas.width, groundCanvas.height);
+    var g = g_ctx.getContext('2d');
+    g.fillStyle = PAL.sky;
+    g.fillRect(0, 0, 750, 212);
+    if (sprites.bg) g.drawImage(sprites.bg, 0, 212 - 260);
+    if (sprites.ground) g.drawImage(sprites.ground, 0, 212 - 95, 750, 95);
+    if (sprites.stone) {
       g.drawImage(sprites.stone, 180, 110);
-      g.drawImage(sprites.stump, 350, 96);
       g.drawImage(sprites.stone, 470, 110);
-      g.drawImage(sprites.bg, 0, 0, 750, 212, 0, 0, 750, 212);
     }
+    if (sprites.stump) g.drawImage(sprites.stump, 350, 96);
     gctx.clearRect(0, 0, groundCanvas.width, groundCanvas.height);
     gctx.drawImage(g_ctx, 0, 0);
   }
@@ -523,40 +632,31 @@
     g.fillStyle = PAL.sky;
     g.fillRect(0, 0, W, H);
 
-    // background mountains/trees (parallax)
+    // background forest
     g.fillStyle = PAL.bgTrees;
     g.fillRect(0, 0, W, H);
-    g.globalAlpha = 0.9;
-    g.drawImage(sprites.bg, 0, 0);
-    g.globalAlpha = 1;
+    g.drawImage(sprites.bg, 0, 0, 750, 260, 0, 0, W, H - 90);
 
     // clouds drift
-    g.drawImage(sprites.cloud, (cloudX) % (W + 160) - 160, 26);
-    g.drawImage(sprites.cloud, (cloudX + 0.6 * W) % (W + 160) - 160, 60);
-    g.drawImage(sprites.cloud, (cloudX * 0.7 + 0.3 * W) % (W + 160) - 160, 14);
+    var cx = ((cloudX % (W + 160)) + (W + 160)) % (W + 160) - 160;
+    g.drawImage(sprites.cloud, cx, 26);
+    g.drawImage(sprites.cloud, (cx + 0.55 * W) % (W + 160) - 160, 60);
+    g.drawImage(sprites.cloud, (cx * 0.7 + 0.3 * W) % (W + 160) - 160, 14);
 
-    // bottom ground strip (behind tree)
-    var gndY = H - 130;
-    g.fillStyle = PAL.grass;
-    g.fillRect(0, gndY, W, 24);
-    g.fillStyle = '#C5E89B';
-    g.fillRect(0, gndY, W, 8);
-    g.fillStyle = PAL.dirt;
-    g.fillRect(0, gndY + 24, W, 106);
+    // ground strip
+    var gndY = H - 95;
+    g.drawImage(sprites.ground, 0, gndY, W, 95);
 
     // stones
-    g.drawImage(sprites.stone, treeX() - 37 - 75 - 34, H - 70);
-    g.drawImage(sprites.stone, treeX() + 37 + 34, H - 70);
+    g.drawImage(sprites.stone, treeX() - 146, H - 70);
+    g.drawImage(sprites.stone, treeX() + 71, H - 70);
 
-    // tree: trunk (tiled), drawn from above stump upward
+    // trunk tiled from stump up
     var sy = H - 105;
-    var tileY = (S.drop * 0.5 + 25) % TRUNK_H;
-    for (var tx = sy - TRUNK_H + tileY; tx < -60; tx += TRUNK_H) {
-      g.drawImage(sprites.trunk, treeX() - TRUNK_W / 2, tx);
+    var scroll = (S.drop % TRUNK_H);
+    for (var ty = sy - TRUNK_H + scroll; ty > -TRUNK_H; ty -= TRUNK_H) {
+      g.drawImage(sprites.trunk, treeX() - TRUNK_W / 2, ty, TRUNK_W, TRUNK_H);
     }
-    // top of trunk into sky
-    var topY = sy - ((S.drop * 0.5 + 25) % TRUNK_H) - TRUNK_H;
-    g.drawImage(sprites.trunk, treeX() - TRUNK_W / 2, topY);
 
     // stump
     g.drawImage(sprites.stump, treeX() - 25, sy);
@@ -565,16 +665,14 @@
     for (var i = 0; i < branches.length; i++) {
       var br = branches[i];
       var by = br.y + S.drop;
-      if (by > 30 && by < H + 30) {
+      if (by > -40 && by < H + 40) {
         var spr = br.side < 0 ? sprites.branchL : sprites.branchR;
-        g.save();
-        if (br.side < 0) { g.translate(treeX() + 10, by); g.scale(1, 1); g.drawImage(spr, -125, -80); }
-        else { g.translate(treeX() - 10, by); g.drawImage(spr, 0, -80); }
-        g.restore();
+        if (br.side < 0) g.drawImage(spr, treeX() - TRUNK_W / 2 - 125 + 8, by - 80);
+        else g.drawImage(spr, treeX() + TRUNK_W / 2 - 8, by - 80);
       }
     }
 
-    // wood chips / falling pieces
+    // falling pieces
     for (var f = 0; f < fallers.length; f++) {
       var fl = fallers[f];
       g.save();
@@ -588,7 +686,7 @@
     g.globalAlpha = 1;
 
     // player
-    var px = treeX() + S.side * PLAYER_DX;
+    var px = treeX() + (S.side || 1) * PLAYER_DX;
     var playerImg = S.over ? (S.side < 0 ? sprites.deadL : sprites.deadR)
       : (S.side < 0 ? sprites.playerL : sprites.playerR);
     g.drawImage(playerImg, px - 25, PLAYER_FOOT_Y - 107);
@@ -701,15 +799,17 @@
       S.levelHold = S.levelHoldTotal = 2200;
     }
 
-    // advance queue
-    if (S.queue.length % 2 === 1) {
+    // advance queue — keep tree filled
+    if (S.queue.length < 12) {
       var s = Math.random() < 0.5 ? -1 : 1;
       S.queue.push(s, 2 * s);
-      S.pa += 100;
-      branches.push({ side: s, y: -S.pa, kind: 2 });
+      var lastY = branches.length ? branches[branches.length - 1].y : (H - 155);
+      branches.push({ side: s, y: lastY - 50, kind: 1 });
+      branches.push({ side: s, y: lastY - 100, kind: 2 });
     }
     var d = S.queue.shift();
     spawnFalling(left, d);
+    if (d !== 0 && branches.length) branches.shift();
 
     S.side = left ? -1 : 1;
     S.drop += DROP_PER_CHOP;
@@ -723,27 +823,43 @@
     if (d === 0) return;
     var isBranch = Math.abs(d) === 2;
     var img = isBranch ? (d > 0 ? sprites.branchR : sprites.branchL) : sprites.log;
-    var startX = isBranch ? (between(left ? 10 : -10)) : (left ? 25 : -25);
+    var startX = treeX() + (left ? -40 : 40);
+    var startY = H - 155;
     var obj = {
       img: img,
       x: startX,
-      y: isBranch ? -30 : -60,
+      y: startY,
       rot: 0,
       scale: 1,
-      alpha: 1,
-      dx: isBranch ? (left ? 100 : -100) : (left ? 100 : -100),
-      dy: isBranch ? -30 : -10
+      alpha: 1
     };
     fallers.push(obj);
-    tween(obj, { x: obj.x + obj.dx, y: obj.y + obj.dy + 90, rot: (left ? -1 : 1) * 1.05, scale: 1.2 }, 24, easeOut, function () {
+    tween(obj, {
+      x: startX + (left ? -110 : 110),
+      y: startY - (isBranch ? 30 : 10),
+      rot: (left ? -1 : 1) * 1.05,
+      scale: 1.2
+    }, 24, easeOut, function () {
       var idx = fallers.indexOf(obj);
       if (idx >= 0) fallers.splice(idx, 1);
     }, 0);
-    // fade after half
-    var tl = tween(obj, { alpha: 0 }, 12, function (x) { return x; }, null, 12);
+    tween(obj, { alpha: 0 }, 12, function (x) { return x; }, null, 12);
   }
 
-  function between(v) { return v; }
+  function seedTree() {
+    branches.length = 0;
+    S.queue = [0, 0];
+    S.pa = PA_INIT;
+    var y0 = H - 155;
+    // two free chops at player height; branches start 100px above
+    for (var i = 0; i < 6; i++) {
+      var s = Math.random() < 0.5 ? -1 : 1;
+      S.queue.push(s, 2 * s);
+      branches.push({ side: s, y: y0 - (2 + i * 2) * 50, kind: 1 });
+      branches.push({ side: s, y: y0 - (3 + i * 2) * 50, kind: 2 });
+      S.pa += 100;
+    }
+  }
 
   function doDeath(left) {
     S.inGame = false;
@@ -820,17 +936,15 @@
     S.level = 1;
     S.qa = QA;
     S.ga = GA;
-    S.queue = [0, 0];
     S.drop = 0;
-    S.pa = PA_INIT;
     S.side = 1;
     S.started = true;
     S.inGame = true;
     S.cdStarted = false;
     S.deadline = 0;
     S.levelHold = 0;
-    branches.length = 0;
     fallers.length = 0;
+    seedTree();
     tweens.length = 0;
     deathT = 0;
     updateScoreDOM();
@@ -934,8 +1048,11 @@
   // ------------------------------------------------------------------
   // Boot
   // ------------------------------------------------------------------
-  renderGround();
   renderTable(loadBest());
   resize();
-  requestAnimationFrame(tick);
+  loadAssets(function () {
+    seedTree();
+    renderGround();
+    requestAnimationFrame(tick);
+  });
 })();

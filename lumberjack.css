@@ -231,7 +231,9 @@ body { font-family: Charter; font-size: 48px; background-color: #333; }
 .button .icon_refresh {
   width: 60px;
   height: 60px;
-  background-size: 60px 60px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
   position: absolute;
   top: 0; bottom: 0; left: 0; right: 0;
   margin: auto;
@@ -263,7 +265,9 @@ body { font-family: Charter; font-size: 48px; background-color: #333; }
 .button_right .icon {
   width: 60px;
   height: 60px;
-  background-size: 60px 60px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
   position: absolute;
   top: 0; bottom: 0; left: 0; right: 0;
   margin: auto;
