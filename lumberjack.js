@@ -562,9 +562,8 @@
       g.restore();
     }
 
-    // Player — container origin at W/2±35; body anchor bottom-left extends
-    // right when facing right, LEFT when flipped (scale.x=-1 around origin)
-    var originX = W / 2 + (S.side ? -35 : 35);
+    // Player — right keeps original +35; left pushed further out per feedback
+    var originX = W / 2 + (S.side ? -52 : 35);
     var py = L.playerFeetY;
     var flip = S.side;
     var showDead = S.over && S.started;
@@ -579,22 +578,22 @@
       if (handUp) {
         // I: x=21, y=-57, anchor(0,1), 47×52
         if (flip) {
-          // local x=21..68 → world origin-68..origin-21
-          drawSprite('hand_up', originX - 68, py - 109, 47, 52, true);
+          // local x=21..68 → world origin-68..origin-21 (axe clear of body)
+          drawSprite('hand_up', originX - 78, py - 109, 47, 52, true);
         } else {
           drawSprite('hand_up', originX + 21, py - 109, 47, 52, false);
         }
       } else {
         // H: x=29, y=-58, anchor(1,1), 59×9 → local x=-30..29
         if (flip) {
-          drawSprite('hand_down', originX - 29, py - 67, 59, 9, true);
+          drawSprite('hand_down', originX - 39, py - 67, 59, 9, true);
         } else {
           drawSprite('hand_down', originX - 30, py - 67, 59, 9, false);
         }
       }
     } else if (showDead) {
-      // w: x=W/2±32, anchor(0,1), flip extends left
-      var wx = W / 2 + (S.side ? -32 : 32);
+      // w: right keeps ±32; left pushed further out
+      var wx = W / 2 + (S.side ? -48 : 32);
       var deadX = S.side ? wx - 73 : wx;
       drawSprite('lumber_died', deadX, py - 85, 73, 85, S.side);
     }
