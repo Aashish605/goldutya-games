@@ -48,6 +48,20 @@ const manifestHttp = await fetch(origin + '/tonconnect-manifest.json')
   .then((r) => r.json())
   .catch((e) => ({ err: String(e) }));
 
+// icon: PNG, square, 180x180 (TON Connect manifest spec)
+let icon = null;
+try {
+  const buf = Buffer.from(await (await fetch(origin + '/assets/tonconnect-icon.png')).arrayBuffer());
+  icon = {
+    png: buf.slice(1, 4).toString('ascii') === 'PNG',
+    w: buf.readUInt32BE(16),
+    h: buf.readUInt32BE(20),
+  };
+  icon.square = icon.w === icon.h;
+} catch (e) {
+  icon = { err: String(e) };
+}
+
 await page.goto(origin + '/', { waitUntil: 'networkidle', timeout: 60000 });
 await page.waitForTimeout(1200);
 
@@ -100,12 +114,13 @@ const afterDisconnect = await page.evaluate(() => ({
 }));
 
 console.log(JSON.stringify({
-  manifest, manifestErr, manifestHttp, init, afterReload, menuOpen, afterDisconnect, errors,
+  manifest, manifestErr, manifestHttp, icon, init, afterReload, menuOpen, afterDisconnect, errors,
 }, null, 2));
 
 const pass =
   manifest && manifest.url && manifest.name && manifest.iconUrl &&
   manifestHttp && manifestHttp.name === 'Goldutya Games' &&
+  icon && icon.png && icon.square && icon.w === 180 &&
   init.cdn && init.cls === 'function' && init.wallet && init.btn && init.iconOk && init.iconRendered &&
   init.label === 'CONNECT WALLET' && init.menuHidden === true &&
   afterReload.label === 'EQAA…AAAA' && afterReload.connected && afterReload.stored === fake &&
