@@ -186,7 +186,9 @@ const Wallet = (() => {
       return false;
     }
     try {
-      tc = new lib.TonConnectUI({ manifestUrl: "tonconnect-manifest.json" });
+      tc = new lib.TonConnectUI({
+        manifestUrl: "https://goldutya-games.vercel.app/tonconnect-manifest.json?v=2",
+      });
     } catch (e) {
       console.warn("[wallet] init failed:", e);
       return false;
