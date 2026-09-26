@@ -30,6 +30,17 @@
         <div class="stat-badge"><span class="stat-icon"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#lightning"/></svg></span> ZERO LAG</div>
       </div>
 
+      <div class="wallet-wrap" id="walletWrap">
+        <button id="walletBtn" class="wallet-btn" type="button">
+          <svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#wallet"/></svg>
+          <span id="walletBtnLabel">CONNECT WALLET</span>
+        </button>
+        <div id="walletMenu" class="wallet-menu" hidden>
+          <button id="walletCopy" type="button">COPY ADDRESS</button>
+          <button id="walletDisconnect" type="button">DISCONNECT</button>
+        </div>
+      </div>
+
       <div class="filter-bar" id="filterBar">
         <button class="filter-btn active" data-cat="all">ALL</button>
         <button class="filter-btn" data-cat="arcade">ARCADE</button>
@@ -53,6 +64,8 @@
   </div>
 
   <script src="telegram.js"></script>
+  <script src="https://unpkg.com/@tonconnect/ui@3.0.2/dist/tonconnect-ui.min.js"></script>
+  <script src="wallet.js"></script>
   <script src="leaderboard.js"></script>
   <script src="difficulty.js"></script>
   <script src="index.js"></script>
