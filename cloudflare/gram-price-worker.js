@@ -8,42 +8,59 @@ const CG_URL =
   "https://api.coingecko.com/api/v3/simple/price?ids=gram&vs_currencies=usd&include_24hr_change=true";
 const BINANCE_URL = "https://api.binance.com/api/v3/ticker/24hr?symbol=TONUSDT";
 
+const UA_HEADERS = {
+  "user-agent": "gram-price-bot/1.0 (+https://t.me/grampriceusdc)",
+  accept: "application/json",
+};
+
 async function fetchJson(url, ms = 8000) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(ms) });
+  const res = await fetch(url, { headers: UA_HEADERS, signal: AbortSignal.timeout(ms) });
   if (!res.ok) throw new Error(`HTTP ${res.status} from ${new URL(url).host}`);
   return res.json();
 }
 
-async function priceFromCoinGecko() {
-  const data = await fetchJson(CG_URL);
-  const g = data && data.gram;
-  if (!g || typeof g.usd !== "number") throw new Error("coingecko: gram.usd missing");
-  return {
-    price: g.usd,
-    change: typeof g.usd_24h_change === "number" ? g.usd_24h_change : null,
-    source: "CoinGecko",
-  };
+const GATE_URL = "https://api.gateio.ws/api/v4/spot/tickers?currency_pair=GRAM_USDT";
+const MEXC_URL = "https://api.mexc.com/api/v3/ticker/24hr?symbol=GRAMUSDT";
+const BYBIT_URL = "https://api.bybit.com/v5/market/tickers?category=spot&symbol=GRAMUSDT";
+
+async function priceFromGate() {
+  const data = await fetchJson(GATE_URL);
+  const t = Array.isArray(data) ? data[0] : null;
+  const price = parseFloat(t && t.last);
+  if (!Number.isFinite(price)) throw new Error("gate: last missing");
+  const change = parseFloat(t.change_percentage);
+  return { price, change: Number.isFinite(change) ? change : null, source: "Gate.io" };
 }
 
-async function priceFromBinance() {
-  const data = await fetchJson(BINANCE_URL);
-  const price = parseFloat(data.price);
-  const change = parseFloat(data.priceChangePercent);
-  if (!Number.isFinite(price)) throw new Error("binance: price missing");
-  return {
-    price,
-    change: Number.isFinite(change) ? change : null,
-    source: "Binance",
-  };
+async function priceFromMexc() {
+  const d = await fetchJson(MEXC_URL);
+  const price = parseFloat(d.lastPrice);
+  if (!Number.isFinite(price)) throw new Error("mexc: lastPrice missing");
+  const prev = parseFloat(d.prevClosePrice);
+  const change = Number.isFinite(prev) && prev > 0 ? ((price - prev) / prev) * 100 : null;
+  return { price, change, source: "MEXC" };
+}
+
+async function priceFromBybit() {
+  const d = await fetchJson(BYBIT_URL);
+  const t = d && d.result && d.result.list && d.result.list[0];
+  const price = parseFloat(t && t.lastPrice);
+  if (!Number.isFinite(price)) throw new Error("bybit: lastPrice missing");
+  const pct = parseFloat(t.price24hPcnt);
+  return { price, change: Number.isFinite(pct) ? pct * 100 : null, source: "Bybit" };
 }
 
 async function fetchQuote() {
-  try {
-    return await priceFromCoinGecko();
-  } catch (err) {
-    console.log(`coingecko failed (${err.message}), trying binance`);
-    return priceFromBinance();
+  const sources = [priceFromGate, priceFromMexc, priceFromBybit];
+  const errors = [];
+  for (const source of sources) {
+    try {
+      return await source();
+    } catch (err) {
+      errors.push(err.message);
+    }
   }
+  throw new Error(`all sources failed: ${errors.join("; ")}`);
 }
 
 function formatPrice(n) {
@@ -92,6 +109,28 @@ async function run(env) {
   return text;
 }
 
+const PROBE_SOURCES = {
+  coingecko: CG_URL,
+  binance_ton: BINANCE_URL,
+  binance_gram: "https://api.binance.com/api/v3/ticker/24hr?symbol=GRAMUSDT",
+  okx_gram: "https://www.okx.com/api/v5/market/ticker?instId=GRAM-USDT",
+  bybit_gram: "https://api.bybit.com/v5/market/tickers?category=spot&symbol=GRAMUSDT",
+  mexc_gram: "https://api.mexc.com/api/v3/ticker/24hr?symbol=GRAMUSDT",
+  kucoin_gram: "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=GRAM-USDT",
+  gate_gram: "https://api.gateio.ws/api/v4/spot/tickers?currency_pair=GRAM_USDT",
+  gate_ton: "https://api.gateio.ws/api/v4/spot/tickers?currency_pair=TON_USDT",
+};
+
+async function probe(url) {
+  try {
+    const res = await fetch(url, { headers: UA_HEADERS, signal: AbortSignal.timeout(6000) });
+    const body = await res.text();
+    return { status: res.status, sample: body.slice(0, 160) };
+  } catch (err) {
+    return { status: 0, sample: err.message };
+  }
+}
+
 export default {
   async scheduled(_controller, env) {
     const text = await run(env);
@@ -100,6 +139,18 @@ export default {
 
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.searchParams.has("probe")) {
+      const results = {};
+      for (const [name, src] of Object.entries(PROBE_SOURCES)) {
+        results[name] = await probe(src);
+      }
+      results.telegram = env.TG_BOT_TOKEN
+        ? await probe(`https://api.telegram.org/bot${env.TG_BOT_TOKEN}/getMe`)
+        : { status: 0, sample: "no TG_BOT_TOKEN secret" };
+      return new Response(JSON.stringify(results, null, 2), {
+        headers: { "content-type": "application/json; charset=utf-8" },
+      });
+    }
     if (url.searchParams.has("test")) {
       try {
         const text = await run(env);
