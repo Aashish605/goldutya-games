@@ -79,7 +79,7 @@ function buildMessage(quote) {
   const mm = String(now.getUTCMinutes()).padStart(2, "0");
   return (
     `💎 GRAM (Toncoin) — $${formatPrice(quote.price)}${formatChange(quote.change)}\n` +
-    `Source: ${quote.source} · ${hh}:${mm} UTC`
+    `${hh}:${mm} UTC`
   );
 }
 
