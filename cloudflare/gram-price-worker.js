@@ -77,10 +77,7 @@ function buildMessage(quote) {
   const now = new Date();
   const hh = String(now.getUTCHours()).padStart(2, "0");
   const mm = String(now.getUTCMinutes()).padStart(2, "0");
-  return (
-    `💎 GRAM (Toncoin) — $${formatPrice(quote.price)}${formatChange(quote.change)}\n` +
-    `${hh}:${mm} UTC`
-  );
+  return `💎 GRAM (Toncoin) — $${formatPrice(quote.price)}${formatChange(quote.change)} · ${hh}:${mm} UTC`;
 }
 
 async function postToTelegram(env, text) {
