@@ -1,0 +1,6 @@
+name = "gram-price-bot"
+main = "cloudflare/gram-price-worker.js"
+compatibility_date = "2026-09-01"
+
+[triggers]
+crons = ["*/3 * * * *"]
