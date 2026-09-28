@@ -67,16 +67,10 @@ function formatPrice(n) {
   return n < 1 ? n.toFixed(4) : n.toFixed(4);
 }
 
-const ARROW_UP_ID = "6181741747618456536";
-const ARROW_DOWN_ID = "6181616252969034717";
-
 function formatChange(change) {
   if (change === null) return "";
-  const arrow =
-    change >= 0
-      ? `<tg-emoji emoji-id="${ARROW_UP_ID}">▲</tg-emoji>`
-      : `<tg-emoji emoji-id="${ARROW_DOWN_ID}">▼</tg-emoji>`;
-  return `  ${arrow}${Math.abs(change).toFixed(2)}% (24h)`;
+  const icon = change >= 0 ? "🟢▲" : "🔴▼";
+  return `  ${icon}${Math.abs(change).toFixed(2)}% (24h)`;
 }
 
 function buildMessage(quote) {
@@ -93,7 +87,6 @@ async function postToTelegram(env, text) {
     body: JSON.stringify({
       chat_id: env.TG_CHANNEL_ID,
       text,
-      parse_mode: "HTML",
       disable_web_page_preview: true,
     }),
   });
