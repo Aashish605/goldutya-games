@@ -181,8 +181,17 @@ function gapFor() {
   return Math.min(H * 0.205 + score * 2.6, H * 0.29);
 }
 
-function catchHalf(b) {
-  return b.w * 0.3;
+function zoneScale() {
+  const d = typeof Difficulty !== "undefined" ? Difficulty.getDiff("eggjump") : "medium";
+  return d === "easy" ? 1.5 : d === "hard" ? 0.85 : 1.0;
+}
+
+function cleanZone(b) {
+  return b.w * 0.16 * zoneScale();
+}
+
+function edgeZone(b) {
+  return b.w * 0.40 * zoneScale();
 }
 
 function restY(b) {
@@ -229,12 +238,12 @@ function makeBasket(idx, x, y, moving, lvl) {
   if (moving) {
     const margin = b.w * 0.5 + 14;
     const cx = Math.max(margin, Math.min(W - margin, x));
-    const amp = Math.min(W * 0.10 + lvl * 2, W * 0.16) * (0.75 + Math.random() * 0.4);
+    const amp = Math.min(W * 0.13 + lvl * 2.5, W * 0.22) * (0.75 + Math.random() * 0.4);
     b.move = {
       cx: cx,
       amp: Math.min(amp, cx - margin, W - margin - cx) || 0,
       phase: Math.random() * Math.PI * 2,
-      speed: (0.010 + lvl * 0.0006) * (0.85 + Math.random() * 0.3),
+      speed: (0.017 + lvl * 0.0009) * (0.85 + Math.random() * 0.3),
     };
     if (b.move.amp < 12) b.move = null;
   }
@@ -249,17 +258,17 @@ function spawnAhead() {
     const gap = gapFor();
     const y = prev.y + gap;
 
-    const tol = prev.w * 0.3 - EW * 0.5 - 4; // guaranteed-catch horizontal offset
+    const tol = prev.w * 0.3 - EW * 0.5 - 4; // moving-bowl spawn spread
     const lvl = idx;
     let moving = false;
-    if (idx >= 3) {
-      const p = idx < 8 ? 0.35 : 0.6;
+    if (idx >= 2) {
+      const p = idx < 7 ? 0.5 : 0.7;
       moving = Math.random() < p;
     }
 
     let b;
     if (!moving) {
-      const off = (Math.random() * 2 - 1) * Math.max(0, tol);
+      const off = (Math.random() * 2 - 1) * BW * 0.14; // inside clean zone
       b = makeBasket(idx, clamp(prev.x + off, BW * 0.5 + 14, W - BW * 0.5 - 14), y, false, lvl);
     } else {
       const off = (Math.random() * 2 - 1) * Math.max(0, tol * 1.6);
@@ -341,6 +350,7 @@ function jump() {
   V0 = Math.sqrt(2 * G * Math.max(dist, H * 0.12));
   egg.vy = V0;
   egg.phase = "fly";
+  egg.tipped = false;
   egg.squash = 0;
   play("jump");
   haptic("light");
@@ -368,6 +378,8 @@ function respawn() {
   egg.vy = -2.2;
   egg.phase = "fly"; // drop-in
   egg.dropping = true;
+  egg.tipped = false;
+  egg.perchB = null;
 }
 
 function gameOver() {
@@ -494,6 +506,22 @@ function update(dt) {
           egg.dropping = false;
           land(lastBasket, true);
         }
+      } else if (egg.phase === "perch") {
+        const b = egg.perchB;
+        egg.x = b.x + egg.perchDx;
+        egg.y = restY(b);
+        egg.squash = 0.25 + Math.abs(Math.sin(egg.perchT * 0.55)) * 0.3;
+        egg.perchT -= f;
+        if (egg.perchT <= 0) {
+          const sign = egg.perchDx >= 0 ? 1 : -1;
+          egg.x = b.x + sign * edgeZone(b) * 1.05;
+          egg.phase = "fly";
+          egg.tipped = true;
+          egg.vy = -1;
+          play("fall");
+          haptic("medium");
+          addFloater(egg.x, egg.y + 34, "OFF!", "#ff5d7a");
+        }
       } else if (egg.phase === "rest") {
         const b = baskets.find((x) => x.idx === lastBasket.idx) || lastBasket;
         egg.x = b.x;
@@ -502,18 +530,29 @@ function update(dt) {
         egg.vy -= G * f;
         egg.y += egg.vy * f;
 
-        // falling (vy < 0, y-up world) → catch: sustained bowl-mouth band,
-        // not just the rim plane (fast falls + moving bowls slipped past)
-        if (egg.vy < 0 && !egg.dropping) {
+        // falling (vy < 0, y-up world) → catch: precision zones
+        // clean = sticks, edge = perch then tip off, else falls through.
+        // bowls at or below lastScoredIdx are never catchable (no free return).
+        if (egg.vy < 0 && !egg.dropping && !egg.tipped) {
           const bottom = egg.y - EH / 2;
           for (const b of baskets) {
+            if (b.idx <= lastScoredIdx) continue;
             const top = b.y + b.h / 2;
-            const deep = top - b.h * 0.95; // bowl interior depth
+            const deep = top - b.h * 0.95;
             if (bottom <= top + 2 && bottom >= deep) {
-              if (Math.abs(egg.x - b.x) <= catchHalf(b) + EW * 0.45) {
+              const dx = egg.x - b.x;
+              const adx = Math.abs(dx);
+              if (adx <= cleanZone(b)) {
                 land(b, false);
-                break;
+              } else if (adx <= edgeZone(b)) {
+                egg.phase = "perch";
+                egg.perchT = 26;
+                egg.perchB = b;
+                egg.perchDx = dx;
+                play("land");
+                haptic("light");
               }
+              break;
             }
           }
         }
@@ -562,11 +601,14 @@ function update(dt) {
 }
 
 function land(b, isRespawn) {
+  const landDx = Math.abs(egg.x - b.x);
   egg.phase = "rest";
   egg.vy = 0;
   egg.x = b.x;
   egg.y = restY(b);
   egg.squash = 0.45;
+  egg.tipped = false;
+  egg.perchB = null;
   lastBasket = b;
   rings.push({ x: b.x, y: b.y, t: 0, life: 26 });
 
@@ -575,8 +617,7 @@ function land(b, isRespawn) {
     return;
   }
 
-  const dx = Math.abs(egg.x - b.x);
-  const perfect = dx < b.w * 0.09;
+  const perfect = landDx < b.w * 0.09;
 
   if (b.idx > lastScoredIdx) {
     lastScoredIdx = b.idx;
