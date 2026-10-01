@@ -229,12 +229,12 @@ function makeBasket(idx, x, y, moving, lvl) {
   if (moving) {
     const margin = b.w * 0.5 + 14;
     const cx = Math.max(margin, Math.min(W - margin, x));
-    const amp = Math.min(W * 0.18 + lvl * 4, W * 0.30) * (0.7 + Math.random() * 0.5);
+    const amp = Math.min(W * 0.10 + lvl * 2, W * 0.16) * (0.75 + Math.random() * 0.4);
     b.move = {
       cx: cx,
       amp: Math.min(amp, cx - margin, W - margin - cx) || 0,
       phase: Math.random() * Math.PI * 2,
-      speed: (0.032 + lvl * 0.0016) * (0.85 + Math.random() * 0.3),
+      speed: (0.010 + lvl * 0.0006) * (0.85 + Math.random() * 0.3),
     };
     if (b.move.amp < 12) b.move = null;
   }
@@ -252,8 +252,8 @@ function spawnAhead() {
     const tol = prev.w * 0.3 - EW * 0.5 - 4; // guaranteed-catch horizontal offset
     const lvl = idx;
     let moving = false;
-    if (idx >= 2) {
-      const p = idx < 7 ? 0.45 : 0.68;
+    if (idx >= 3) {
+      const p = idx < 8 ? 0.35 : 0.6;
       moving = Math.random() < p;
     }
 
@@ -326,6 +326,7 @@ function startGame() {
   state = "play";
   paused = false;
   hintT = 1000000; // until first jump
+  overlayTitle.textContent = "EGG JUMP";
   overlay.classList.add("hidden");
   if (!muted) SND.bg.play().catch(() => {});
   haptic("light");
@@ -333,8 +334,11 @@ function startGame() {
 
 function jump() {
   if (state !== "play" || paused || !egg || egg.phase !== "rest" || deadT > 0) return;
-  const gap = gapFor();
-  V0 = Math.sqrt(2 * G * (gap + H * 0.10));
+  // impulse measured against the ACTUAL next bowl geometry (screen-height safe)
+  const target = baskets.find((b) => b.y > lastBasket.y + lastBasket.h);
+  const top = target ? target.y + target.h / 2 : lastBasket.y + gapFor();
+  const dist = top + EH / 2 + H * 0.085 - egg.y;
+  V0 = Math.sqrt(2 * G * Math.max(dist, H * 0.12));
   egg.vy = V0;
   egg.phase = "fly";
   egg.squash = 0;
@@ -495,18 +499,18 @@ function update(dt) {
         egg.x = b.x;
         egg.y = restY(b);
       } else if (egg.phase === "fly") {
-        const prevY = egg.y;
         egg.vy -= G * f;
         egg.y += egg.vy * f;
 
-        // falling (vy < 0, y-up world) → catch check
+        // falling (vy < 0, y-up world) → catch: sustained bowl-mouth band,
+        // not just the rim plane (fast falls + moving bowls slipped past)
         if (egg.vy < 0 && !egg.dropping) {
+          const bottom = egg.y - EH / 2;
           for (const b of baskets) {
             const top = b.y + b.h / 2;
-            const prevBottom = prevY - EH / 2;
-            const bottom = egg.y - EH / 2;
-            if (prevBottom >= top - 1 && bottom <= top) {
-              if (Math.abs(egg.x - b.x) <= catchHalf(b) + EW * 0.18) {
+            const deep = top - b.h * 0.95; // bowl interior depth
+            if (bottom <= top + 2 && bottom >= deep) {
+              if (Math.abs(egg.x - b.x) <= catchHalf(b) + EW * 0.45) {
                 land(b, false);
                 break;
               }
