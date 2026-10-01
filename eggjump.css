@@ -1,0 +1,51 @@
+/* eggjump.css — Egg Jump specifics on top of jump.css layout */
+#game {
+  background: #132211;
+}
+
+.overlay-score {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(1.4rem, 6vw, 2rem);
+  letter-spacing: 3px;
+  color: #fff;
+}
+.overlay-score b {
+  color: var(--gold, #F5C518);
+  font-size: 1.5em;
+  margin-left: 8px;
+}
+.overlay-score[hidden] { display: none; }
+
+.overlay-go-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: min(78vw, 340px);
+  aspect-ratio: 512 / 604;
+  padding: 12% 10% 14%;
+  background: url('assets/eggjump/gameover.webp') center / contain no-repeat;
+  color: #fff;
+  text-align: center;
+}
+.overlay-go-panel .go-label {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(1.1rem, 5vw, 1.5rem);
+  letter-spacing: 4px;
+  color: var(--cyan, #56D9FF);
+}
+.overlay-go-panel .go-score {
+  font-family: "Bebas Neue", sans-serif;
+  font-size: clamp(2.4rem, 12vw, 3.6rem);
+  line-height: 1;
+  color: var(--gold, #F5C518);
+  text-shadow: 0 0 18px rgba(245, 197, 24, 0.4);
+}
+.overlay-go-panel .go-best {
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  color: var(--muted, #A5ADBC);
+  text-transform: uppercase;
+}

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0B0B0D" />
+  <title>Egg Jump — Time Your Jump</title>
+  <meta name="description" content="Egg Jump. One tap. Time the jump, land the egg in the basket, climb higher. TON ecosystem." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="ui-tokens.css" />
+  <link rel="stylesheet" href="jump.css" />
+  <link rel="stylesheet" href="eggjump.css" />
+  <link rel="stylesheet" href="gameover.css" />
+  <link rel="stylesheet" href="difficulty.css" />
+  <link rel="stylesheet" href="leaderboard.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A5%8A%3C/text%3E%3C/svg%3E" />
+  <meta property="og:title" content="Egg Jump — Time Your Jump" />
+  <meta property="og:description" content="One tap. Land the egg in the next basket. How high can you climb?" />
+  <meta property="og:image" content="assets/card-eggjump.jpg" />
+</head>
+<body class="grid-bg">
+  <div class="stage">
+    <canvas id="game"></canvas>
+
+    <header class="topbar">
+      <button id="muteBtn" class="mute-btn" aria-label="Toggle sound"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg></button>
+      <h1 class="title">EGG <span>JUMP</span></h1>
+      <div class="bestscore">BEST <b id="best">0</b></div>
+    </header>
+
+    <div id="overlay" class="overlay">
+      <img class="overlay-duck-img" src="assets/eggjump/menu-egg.webp" alt="Egg in basket" aria-hidden="true" />
+      <h2 class="overlay-title" id="overlayTitle">EGG JUMP</h2>
+      <p class="overlay-sub" id="overlaySub">Tap once. Time the jump. Land the egg in the next basket and climb as high as you can.</p>
+      <div id="diffPicker"></div>
+      <p class="overlay-score" id="overlayScore" hidden>SCORE <b id="finalScore">0</b></p>
+      <button id="startBtn" class="btn">START</button>
+      <button id="shareBtn" class="btn share-btn" style="display:none">SHARE SCORE</button>
+      <div id="leaderboard" class="lb-container"></div>
+      <p class="hint">tap / click / space to jump</p>
+      <p class="mini">3 lives · perfect landings = streak</p>
+      <p class="hint" style="margin-top:8px"><a href="index.html" class="btn-back"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#gamepad"/></svg> ALL GAMES</a></p>
+      <p class="hint" style="margin-top:6px">
+        <a href="jump.html" style="color:var(--gold)"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> JUMP</a> ·
+        <a href="fly.html" style="color:var(--cyan)"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> FLY</a> ·
+        <a href="snake.html" style="color:#4CAF50"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> SNAKE</a> ·
+        <a href="breakout.html" style="color:#FF9800"><svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#arrow-right"/></svg> BREAKOUT</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="telegram.js"></script>
+  <script src="leaderboard.js"></script>
+  <script src="difficulty.js"></script>
+  <script src="eggjump.js"></script>
+</body>
+</html>
