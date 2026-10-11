@@ -11,6 +11,9 @@ const TG = (() => {
     tg.expand();
     tg.setHeaderColor("#0B0B0D");
     tg.setBackgroundColor("#0B0B0D");
+    setAppHeight();
+    applySafeArea();
+    onViewportChange();
     if (tg.MainButton) {
       tg.MainButton.hide();
     }
@@ -65,6 +68,82 @@ const TG = (() => {
     return tg?.platform || null;
   }
 
+  /* --- mobile / Telegram viewport helpers --- */
+  function viewportHeight() {
+    if (tg && typeof tg.viewportStableHeight === "number" && tg.viewportStableHeight > 0) return tg.viewportStableHeight;
+    if (tg && typeof tg.viewportHeight === "number" && tg.viewportHeight > 0) return tg.viewportHeight;
+    return window.innerHeight;
+  }
+
+  function setAppHeight() {
+    const h = viewportHeight();
+    if (h) document.documentElement.style.setProperty("--app-height", h + "px");
+  }
+
+  function applySafeArea() {
+    const root = document.documentElement;
+    const sa = tg && tg.safeAreaInset;
+    const csa = tg && tg.contentSafeAreaInset;
+    if (sa) {
+      root.style.setProperty("--tg-safe-top", (sa.top || 0) + "px");
+      root.style.setProperty("--tg-safe-bottom", (sa.bottom || 0) + "px");
+      root.style.setProperty("--tg-safe-left", (sa.left || 0) + "px");
+      root.style.setProperty("--tg-safe-right", (sa.right || 0) + "px");
+    }
+    if (csa) {
+      root.style.setProperty("--tg-content-top", (csa.top || 0) + "px");
+      root.style.setProperty("--tg-content-bottom", (csa.bottom || 0) + "px");
+    }
+  }
+
+  function onViewportChange(cb) {
+    const fire = () => {
+      setAppHeight();
+      applySafeArea();
+      if (typeof cb === "function") cb();
+    };
+    if (tg && tg.onEvent) {
+      ["viewportChanged", "safeAreaChanged", "contentSafeAreaChanged"].forEach((ev) => {
+        try { tg.onEvent(ev, fire); } catch (e) {}
+      });
+    }
+    window.addEventListener("resize", fire);
+    window.addEventListener("orientationchange", fire);
+  }
+
+  function onThemeChange(cb) {
+    if (tg && tg.onEvent) {
+      try { tg.onEvent("themeChanged", () => { if (typeof cb === "function") cb(); }); } catch (e) {}
+    }
+  }
+
+  function onDeactivated(cb) {
+    if (tg && tg.onEvent) {
+      try { tg.onEvent("deactivated", () => { if (typeof cb === "function") cb(); }); } catch (e) {}
+    }
+  }
+
+  function disableVerticalSwipes() {
+    if (tg && typeof tg.disableVerticalSwipes === "function") { try { tg.disableVerticalSwipes(); } catch (e) {} }
+  }
+
+  function enableVerticalSwipes() {
+    if (tg && typeof tg.enableVerticalSwipes === "function") { try { tg.enableVerticalSwipes(); } catch (e) {} }
+  }
+
+  function lockOrientation() {
+    if (tg && typeof tg.lockOrientation === "function") { try { tg.lockOrientation(); } catch (e) {} }
+  }
+
+  function unlockOrientation() {
+    if (tg && typeof tg.unlockOrientation === "function") { try { tg.unlockOrientation(); } catch (e) {} }
+  }
+
+  function requestFullscreen() {
+    if (tg && typeof tg.requestFullscreen === "function") { try { tg.requestFullscreen(); return true; } catch (e) {} }
+    return false;
+  }
+
   function showMainButton(text, color) {
     if (!tg?.MainButton) return;
     tg.MainButton.setText(text);
@@ -117,6 +196,10 @@ const TG = (() => {
     showMainButton, hideMainButton, onMainButton,
     showBackButton, hideBackButton, onBackButton,
     share, openLink, openTelegramLink,
+    viewportHeight, setAppHeight, applySafeArea,
+    onViewportChange, onThemeChange, onDeactivated,
+    disableVerticalSwipes, enableVerticalSwipes,
+    lockOrientation, unlockOrientation, requestFullscreen,
     raw: tg,
   };
 })();

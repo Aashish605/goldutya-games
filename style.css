@@ -24,12 +24,18 @@ body {
   font-family: "Space Mono", monospace;
   background: var(--dark);
   color: #fff;
+  height: 100vh;
   height: 100svh;
+  height: var(--app-height, 100svh);
+  position: fixed;
+  inset: 0;
+  width: 100%;
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
   touch-action: manipulation;
 }
 
@@ -43,7 +49,9 @@ body {
 .stage {
   position: relative;
   width: 100vw;
+  height: 100vh;
   height: 100svh;
+  height: var(--app-height, 100svh);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -52,7 +60,9 @@ body {
 #game {
   display: block;
   width: 100vw;
+  height: 100vh;
   height: 100svh;
+  height: var(--app-height, 100svh);
   background: linear-gradient(180deg, #0a1526 0%, #0d1f3c 45%, #14406b 100%);
   touch-action: none;
 }
@@ -60,7 +70,7 @@ body {
 /* top bar: flushed to top, respects notch safe-area */
 .topbar {
   position: absolute;
-  top: max(12px, env(safe-area-inset-top));
+  top: max(12px, env(safe-area-inset-top), var(--tg-content-top, 0px));
   left: max(20px, calc(env(safe-area-inset-left) + 8px));
   right: max(20px, calc(env(safe-area-inset-right) + 8px));
   display: flex;
@@ -68,6 +78,13 @@ body {
   justify-content: space-between;
   pointer-events: none;
   z-index: 2;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: all;
 }
 
 .title {
@@ -271,4 +288,50 @@ body {
   color: var(--dark);
   border-color: var(--gold);
   font-weight: bold;
+}
+
+/* ── MOBILE-FIRST / TELEGRAM SHELL (fly) ── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.fly-page .overlay {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: manipulation;
+  gap: 10px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fly-page .difficulty-btn {
+  min-height: 44px;
+  padding: 10px 16px;
+}
+
+.fly-page .skin-swatch {
+  width: 46px;
+  height: 46px;
+}
+
+.fly-page .btn,
+.fly-page .share-btn,
+.fly-page .mute-btn {
+  touch-action: manipulation;
+}
+
+@media (max-height: 680px) {
+  .fly-page .overlay {
+    gap: 6px;
+  }
+  .fly-page .overlay-duck-img {
+    width: clamp(56px, 14svh, 96px);
+  }
 }
