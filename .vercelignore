@@ -1,0 +1,14 @@
+# Never deploy dev/test/build artifacts
+node_modules/
+tests/
+tools/
+ref/
+playwright-report/
+test-results/
+*.log
+package.json
+package-lock.json
+playwright.config.ts
+tsconfig.json
+.gitignore
+.vercel

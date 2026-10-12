@@ -31,14 +31,15 @@
   font-family: "Space Mono", monospace;
   font-size: 0.65rem;
   letter-spacing: 1px;
-  padding: 6px 14px;
+  padding: 10px 16px;
   border-radius: 999px;
   border: 1px solid var(--picker-line);
   background: rgba(11, 11, 13, 0.6);
   color: var(--picker-muted);
   cursor: pointer;
   transition: all 0.2s ease;
-  min-height: 36px;
+  min-height: 44px;
+  touch-action: manipulation;
 }
 
 .difficulty-btn:hover {

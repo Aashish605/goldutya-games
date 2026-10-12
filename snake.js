@@ -22,24 +22,28 @@ const diffPicker = document.getElementById("diffPicker");
 
 let W, H, dpr;
 let cellSize, cols, rows, offsetX, offsetY;
+let gridPath = null, bodySprite = null;
+let fontFood = "", fontScore = "", fontBoost = "", fontMs = "";
 let snake, prevSnake, dir, nextDir, food, powerFood, obstacles = [], score, bestScore, frameCount;
 let interval, speedBoost, speedBoostFrames, foodEaten, state;
-let muted = localStorage.getItem("goldutya-snake-mute") === "1", skin = "default";
+let muted = (() => { try { return localStorage.getItem("goldutya-snake-mute") === "1"; } catch (e) { return false; } })(), skin = "default";
 let shakeX = 0, shakeY = 0, shakeFrames = 0;
 let nightMode = false, nightCounter = 0;
 let clouds = [];
 let audioCtx = null;
 let paused = false;
 let deathParticles = [];
-let hintShown = localStorage.getItem("goldutya-snake-hinted") === "1";
+let hintShown = (() => { try { return localStorage.getItem("goldutya-snake-hinted") === "1"; } catch (e) { return false; } })();
 let hintTimer = 0;
 const MILESTONES = [100, 250, 500, 1000];
 let lastMilestone = 0;
+let milestoneTimer = 0;
 
 let eatPopTimer = 0;
 let moveStepProgress = 1;
 let currentInterval = 8;
-let deathSlowMo = 0;
+let tickAcc = 0;
+let lastFrameTime = 0;
 
 let isMobile = false;
 let joyBaseX = 0, joyBaseY = 0, joyR = 50;
@@ -59,8 +63,36 @@ function initDuckImages() {
   }
 }
 
+function buildGridPath() {
+  gridPath = new Path2D();
+  for (let c = 0; c <= cols; c++) {
+    gridPath.moveTo(offsetX + c * cellSize, offsetY);
+    gridPath.lineTo(offsetX + c * cellSize, offsetY + rows * cellSize);
+  }
+  for (let r = 0; r <= rows; r++) {
+    gridPath.moveTo(offsetX, offsetY + r * cellSize);
+    gridPath.lineTo(offsetX + cols * cellSize, offsetY + r * cellSize);
+  }
+}
+
+function buildBodySprite() {
+  const sz = cellSize;
+  bodySprite = document.createElement("canvas");
+  bodySprite.width = sz; bodySprite.height = sz;
+  const sctx = bodySprite.getContext("2d");
+  const pad = Math.max(1, sz * 0.1);
+  const pw = sz - pad * 2;
+  const g = sctx.createLinearGradient(pad, pad, pad + pw, pad + pw);
+  g.addColorStop(0, GOLD);
+  g.addColorStop(1, GOLD2);
+  sctx.fillStyle = g;
+  drawRoundedRect(sctx, pad, pad, pw, pw, Math.max(2, pw * 0.3));
+  sctx.fill();
+}
+
 function resize() {
-  dpr = window.devicePixelRatio || 1;
+  const LOW_END = ((navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
+  dpr = Math.min(LOW_END ? 1.5 : 2, window.devicePixelRatio || 1);
   const rect = canvas.getBoundingClientRect();
   W = Math.round(rect.width * dpr);
   H = Math.round(rect.height * dpr);
@@ -77,6 +109,12 @@ function resize() {
   joyBaseY = H - joyR - 160;
   joyKnobX = joyBaseX;
   joyKnobY = joyBaseY;
+  buildBodySprite();
+  buildGridPath();
+  fontFood = `bold ${Math.max(8, cellSize * 0.3)}px sans-serif`;
+  fontScore = `bold ${Math.max(14, cellSize * 0.8)}px var(--font-body, monospace)`;
+  fontBoost = `bold ${Math.max(12, cellSize * 0.6)}px var(--font-body, monospace)`;
+  fontMs = `bold ${Math.max(10, cellSize * 0.5)}px var(--font-body, monospace)`;
 }
 
 function getDiffConfig() {
@@ -102,9 +140,9 @@ function initClouds() {
   }
 }
 
-function updateClouds() {
+function updateClouds(f) {
   for (const c of clouds) {
-    c.x += c.speed;
+    c.x += c.speed * f;
     if (c.x - c.r > W) c.x = -c.r;
   }
 }
@@ -158,15 +196,16 @@ function saveBest() {
 }
 
 function randomGridPos() {
-  let x, y, invalid;
-  do {
-    x = Math.floor(Math.random() * cols);
-    y = Math.floor(Math.random() * rows);
-    const onSnake = snake ? snake.some(s => s.x === x && s.y === y) : false;
-    const onObstacle = obstacles ? obstacles.some(o => o.x === x && o.y === y) : false;
-    invalid = onSnake || onObstacle;
-  } while (invalid);
-  return { x, y };
+  const free = [];
+  for (let x = 0; x < cols; x++) {
+    for (let y = 0; y < rows; y++) {
+      const onSnake = snake ? snake.some(s => s.x === x && s.y === y) : false;
+      const onObstacle = obstacles ? obstacles.some(o => o.x === x && o.y === y) : false;
+      if (!onSnake && !onObstacle) free.push({ x, y });
+    }
+  }
+  if (!free.length) return { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+  return free[Math.floor(Math.random() * free.length)];
 }
 
 function placeObstacles(count) {
@@ -222,7 +261,8 @@ function initGame() {
   shakeFrames = 0;
   eatPopTimer = 0;
   moveStepProgress = 1;
-  deathSlowMo = 0;
+  tickAcc = 0;
+  milestoneTimer = 0;
   state = "READY";
   placeObstacles(cfg.obstacleCount);
   placeFood();
@@ -253,35 +293,47 @@ function resetAfterDeath() {
   lastMilestone = 0;
   eatPopTimer = 0;
   moveStepProgress = 1;
-  deathSlowMo = 0;
+  tickAcc = 0;
+  milestoneTimer = 0;
   placeObstacles(cfg.obstacleCount);
   placeFood();
 }
 
 function setDir(nx, ny) {
-  if (dir.x === -nx && dir.y === -ny) return;
+  if (nextDir.x === -nx && nextDir.y === -ny) return;
   if (nx !== 0 || ny !== 0) nextDir = { x: nx, y: ny };
 }
 
-function update() {
+function update(f) {
+  updateClouds(f);
+
+  for (let i = deathParticles.length - 1; i >= 0; i--) {
+    const p = deathParticles[i];
+    p.x += p.vx * f; p.y += p.vy * f; p.vy += 0.1 * f; p.life -= f;
+    if (p.life <= 0) deathParticles.splice(i, 1);
+  }
+
   if (state !== "PLAY") return;
   frameCount++;
 
-  if (eatPopTimer > 0) eatPopTimer--;
+  if (eatPopTimer > 0) eatPopTimer -= f;
+  if (milestoneTimer > 0) milestoneTimer -= f;
 
   if (speedBoost) {
-    speedBoostFrames--;
+    speedBoostFrames -= f;
     if (speedBoostFrames <= 0) speedBoost = false;
   }
 
   const cfg = getDiffConfig();
-  currentInterval = speedBoost ? Math.max(2, Math.floor(cfg.baseInterval * 0.4)) : cfg.baseInterval;
+  currentInterval = speedBoost ? Math.max(2, cfg.baseInterval * 0.4) : cfg.baseInterval;
 
-  moveStepProgress = Math.min(1, (frameCount % currentInterval) / currentInterval);
-
-  if (frameCount % Math.max(1, Math.floor(currentInterval)) !== 0) return;
-
-  moveStepProgress = 0;
+  tickAcc += f;
+  if (tickAcc < currentInterval) {
+    moveStepProgress = tickAcc / currentInterval;
+    return;
+  }
+  tickAcc -= currentInterval;
+  moveStepProgress = tickAcc / currentInterval;
   prevSnake = snake.map(s => ({ ...s }));
   dir = { ...nextDir };
   const head = snake[0];
@@ -305,7 +357,9 @@ function update() {
     }
   }
 
-  for (let i = 0; i < snake.length; i++) {
+  const eats = (food && nx === food.x && ny === food.y) || (powerFood && nx === powerFood.x && ny === powerFood.y);
+  const bodyLen = snake.length - (eats ? 0 : 1);
+  for (let i = 0; i < bodyLen; i++) {
     if (snake[i].x === nx && snake[i].y === ny) {
       gameOver();
       return;
@@ -329,6 +383,7 @@ function update() {
     for (let mi = 0; mi < MILESTONES.length; mi++) {
       if (score >= MILESTONES[mi] && lastMilestone <= mi) {
         lastMilestone = mi + 1;
+        milestoneTimer = 40;
         shakeFrames = 6;
         break;
       }
@@ -347,14 +402,6 @@ function update() {
   }
 
   if (!ate) snake.pop();
-
-  updateClouds();
-
-  for (let i = deathParticles.length - 1; i >= 0; i--) {
-    const p = deathParticles[i];
-    p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life--;
-    if (p.life <= 0) deathParticles.splice(i, 1);
-  }
 }
 
 function gameOver() {
@@ -362,10 +409,9 @@ function gameOver() {
   const isNewBest = score > bestScore && score > 0;
   saveBest();
   sfxDeath();
-  TG.haptic("heavy");
+  if (typeof TG !== "undefined" && TG.haptic) TG.haptic("heavy");
   shakeFrames = 18;
   deathParticles = [];
-  deathSlowMo = 12;
 
   const hx = offsetX + snake[0].x * cellSize + cellSize / 2;
   const hy = offsetY + snake[0].y * cellSize + cellSize / 2;
@@ -399,18 +445,18 @@ function gameOver() {
   }
 }
 
-function drawRoundedRect(x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.arcTo(x + w, y, x + w, y + r, r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-  ctx.lineTo(x + r, y + h);
-  ctx.arcTo(x, y + h, x, y + h - r, r);
-  ctx.lineTo(x, y + r);
-  ctx.arcTo(x, y, x + r, y, r);
-  ctx.closePath();
+function drawRoundedRect(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.lineTo(x + w - r, y);
+  c.arcTo(x + w, y, x + w, y + r, r);
+  c.lineTo(x + w, y + h - r);
+  c.arcTo(x + w, y + h, x + w - r, y + h, r);
+  c.lineTo(x + r, y + h);
+  c.arcTo(x, y + h, x, y + h - r, r);
+  c.lineTo(x, y + r);
+  c.arcTo(x, y, x + r, y, r);
+  c.closePath();
 }
 
 function drawStar(cx, cy, outerR, innerR, pts) {
@@ -426,7 +472,7 @@ function drawStar(cx, cy, outerR, innerR, pts) {
   ctx.closePath();
 }
 
-function draw() {
+function draw(f) {
   ctx.save();
 
   if (shakeFrames > 0) {
@@ -441,23 +487,12 @@ function draw() {
   ctx.fillRect(0, 0, W, H);
 
   drawClouds();
-  drawHint();
+  drawHint(f);
 
   // Grid background lines
   ctx.strokeStyle = "rgba(255,255,255,0.03)";
   ctx.lineWidth = 1;
-  for (let c = 0; c <= cols; c++) {
-    ctx.beginPath();
-    ctx.moveTo(offsetX + c * cellSize, offsetY);
-    ctx.lineTo(offsetX + c * cellSize, offsetY + rows * cellSize);
-    ctx.stroke();
-  }
-  for (let r = 0; r <= rows; r++) {
-    ctx.beginPath();
-    ctx.moveTo(offsetX, offsetY + r * cellSize);
-    ctx.lineTo(offsetX + cols * cellSize, offsetY + r * cellSize);
-    ctx.stroke();
-  }
+  if (gridPath) ctx.stroke(gridPath);
 
   // Draw obstacles
   for (const o of obstacles) {
@@ -467,7 +502,7 @@ function draw() {
     ctx.fillStyle = "#161B22";
     ctx.strokeStyle = RED;
     ctx.lineWidth = 1.5;
-    drawRoundedRect(ox, oy, sz, sz, 4);
+    drawRoundedRect(ctx, ox, oy, sz, sz, 4);
     ctx.fill(); ctx.stroke();
 
     ctx.strokeStyle = "rgba(212,43,43,0.6)";
@@ -501,15 +536,8 @@ function draw() {
     const ph = Math.max(4, (cellSize - pad * 2) * taper);
     const px = offsetX + gx * cellSize + (cellSize - pw) / 2;
     const py = offsetY + gy * cellSize + (cellSize - ph) / 2;
-    const radius = Math.max(2, pw * 0.3);
-
-    const g = ctx.createLinearGradient(px, py, px + pw, py + ph);
-    g.addColorStop(0, GOLD);
-    g.addColorStop(1, GOLD2);
     ctx.globalAlpha = (1 - t * 0.45) * nightMod;
-    ctx.fillStyle = g;
-    drawRoundedRect(px, py, pw, ph, radius);
-    ctx.fill();
+    if (bodySprite) ctx.drawImage(bodySprite, px, py, pw, ph);
   }
   ctx.globalAlpha = 1;
 
@@ -555,7 +583,7 @@ function draw() {
       }
     } else {
       ctx.fillStyle = GOLD;
-      drawRoundedRect(2, 2, cellSize - 4, cellSize - 4, 6);
+      drawRoundedRect(ctx, 2, 2, cellSize - 4, cellSize - 4, 6);
       ctx.fill();
     }
 
@@ -596,7 +624,7 @@ function draw() {
     ctx.arc(fx, fy, fr, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = "rgba(255,255,255,0.7)";
-    ctx.font = `bold ${Math.max(8, cellSize * 0.3)}px sans-serif`;
+    ctx.font = fontFood;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText("✦", fx, fy - 1);
@@ -618,7 +646,7 @@ function draw() {
 
   if (state === "PLAY") {
     ctx.fillStyle = "#fff";
-    ctx.font = `bold ${Math.max(14, cellSize * 0.8)}px var(--font-body, monospace)`;
+    ctx.font = fontScore;
     ctx.textAlign = "right";
     ctx.textBaseline = "top";
     ctx.globalAlpha = 0.85;
@@ -632,7 +660,7 @@ function draw() {
     ctx.fillRect(offsetX, offsetY, cols * cellSize, rows * cellSize);
     ctx.globalAlpha = 1;
     const boostSec = Math.ceil(speedBoostFrames / 60);
-    ctx.font = `bold ${Math.max(12, cellSize * 0.6)}px var(--font-body, monospace)`;
+    ctx.font = fontBoost;
     ctx.textAlign = "center";
     ctx.fillStyle = CYAN;
     ctx.globalAlpha = 0.8;
@@ -649,10 +677,10 @@ function draw() {
   }
   ctx.globalAlpha = 1;
 
-  if (lastMilestone > 0 && state === "PLAY") {
+  if (lastMilestone > 0 && milestoneTimer > 0 && state === "PLAY") {
     const ms = MILESTONES[lastMilestone - 1];
-    const flash = 0.3 + Math.sin(frameCount * 0.2) * 0.2;
-    ctx.font = `bold ${Math.max(10, cellSize * 0.5)}px var(--font-body, monospace)`;
+    const flash = (0.3 + Math.sin(frameCount * 0.2) * 0.2) * Math.min(1, milestoneTimer / 15);
+    ctx.font = fontMs;
     ctx.textAlign = "left";
     ctx.fillStyle = GOLD;
     ctx.globalAlpha = flash;
@@ -664,10 +692,14 @@ function draw() {
   ctx.restore();
 }
 
-function loop() {
+function loop(ts) {
+  if (!lastFrameTime) lastFrameTime = ts;
+  const dtMs = Math.min(100, ts - lastFrameTime);
+  lastFrameTime = ts;
   if (!paused) {
-    update();
-    draw();
+    const f = Math.min(2.5, dtMs / 16.6667);
+    update(f);
+    draw(f);
   }
   requestAnimationFrame(loop);
 }
@@ -694,9 +726,9 @@ function drawJoystick() {
   ctx.restore();
 }
 
-function drawHint() {
+function drawHint(f) {
   if (hintShown || hintTimer <= 0) return;
-  hintTimer--;
+  hintTimer -= f;
   ctx.save();
   ctx.globalAlpha = Math.min(1, hintTimer / 30);
   ctx.font = '700 ' + Math.max(16, cellSize * 1.2) + 'px "Bebas Neue", sans-serif';
@@ -707,7 +739,7 @@ function drawHint() {
   ctx.restore();
   if (hintTimer <= 0 && !hintShown) {
     hintShown = true;
-    localStorage.setItem("goldutya-snake-hinted", "1");
+    try { localStorage.setItem("goldutya-snake-hinted", "1"); } catch (e) { /* */ }
   }
 }
 
@@ -750,7 +782,7 @@ function handleTapQuadrant(cx, cy) {
   else setDir(0, 1);
 }
 
-let touchStartX, touchStartY;
+const touchStarts = new Map();
 
 function joyHitTest(cx, cy) {
   const jx = joyBaseX / dpr, jy = joyBaseY / dpr, jr = joyR / dpr;
@@ -790,9 +822,9 @@ canvas.addEventListener("touchstart", (e) => {
       return;
     }
   }
-  const t = e.touches[0];
-  touchStartX = t.clientX;
-  touchStartY = t.clientY;
+  for (const t of e.changedTouches) {
+    if (!joyActive || t.identifier !== joyTouchId) touchStarts.set(t.identifier, { x: t.clientX, y: t.clientY });
+  }
 }, { passive: false });
 
 canvas.addEventListener("touchmove", (e) => {
@@ -815,17 +847,18 @@ canvas.addEventListener("touchend", (e) => {
       joyTouchId = null;
       joyKnobX = joyBaseX;
       joyKnobY = joyBaseY;
-      return;
+      continue;
     }
-  }
-  if (state !== "PLAY") return;
-  const t = e.changedTouches[0];
-  const dx = t.clientX - touchStartX;
-  const dy = t.clientY - touchStartY;
-  if (Math.max(Math.abs(dx), Math.abs(dy)) < 15) {
-    handleTapQuadrant(t.clientX * dpr, t.clientY * dpr);
-  } else {
-    handleSwipe(touchStartX * dpr, touchStartY * dpr, t.clientX * dpr, t.clientY * dpr);
+    const start = touchStarts.get(t.identifier);
+    touchStarts.delete(t.identifier);
+    if (!start || state !== "PLAY") continue;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 15) {
+      handleTapQuadrant(t.clientX * dpr, t.clientY * dpr);
+    } else {
+      handleSwipe(start.x * dpr, start.y * dpr, t.clientX * dpr, t.clientY * dpr);
+    }
   }
 }, { passive: false });
 
@@ -859,7 +892,7 @@ shareBtn.addEventListener("click", (e) => {
 muteBtn.addEventListener("click", (e) => {
   e.stopPropagation();
   muted = !muted;
-  localStorage.setItem("goldutya-snake-mute", muted ? "1" : "0");
+  try { localStorage.setItem("goldutya-snake-mute", muted ? "1" : "0"); } catch (e) { /* */ }
   muteBtn.classList.toggle("muted", muted);
   muteBtn.innerHTML = muted ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
 });
@@ -871,7 +904,7 @@ skinPicker.addEventListener("click", (e) => {
   skin = swatch.dataset.skin;
   skinPicker.querySelectorAll(".skin-swatch").forEach(s => s.classList.remove("active"));
   swatch.classList.add("active");
-  TG.haptic("light");
+  if (typeof TG !== "undefined" && TG.haptic) TG.haptic("light");
 });
 
 /* --- skin UI --- */
@@ -902,14 +935,24 @@ function updateSkinUI() {
 }
 updateSkinUI();
 
-window.addEventListener("resize", () => {
+function onResize() {
   resize();
-  if (state === "PLAY") {
-    const head = snake[0];
-    if (head.x >= cols) head.x = cols - 1;
-    if (head.y >= rows) head.y = rows - 1;
+  if (state === "PLAY" && snake) {
+    for (const s of snake) {
+      if (s.x >= cols) s.x = cols - 1;
+      if (s.y >= rows) s.y = rows - 1;
+    }
+    for (const o of obstacles) {
+      if (o.x >= cols) o.x = cols - 1;
+      if (o.y >= rows) o.y = rows - 1;
+    }
+    if (food && (food.x >= cols || food.y >= rows)) food = randomGridPos();
+    if (powerFood && (powerFood.x >= cols || powerFood.y >= rows)) powerFood = randomGridPos();
   }
-});
+}
+
+window.addEventListener("resize", onResize);
+if (typeof ResizeObserver !== "undefined") new ResizeObserver(onResize).observe(canvas);
 
 initDuckImages();
 loadBest();

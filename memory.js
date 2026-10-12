@@ -91,12 +91,11 @@ let elapsed = 0;
   }
 
   /* ── BEST SCORE ── */
-  function loadBest() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch { return null; }
+  function isBetterRun(score, mvs, time, prev) {
+    if (!prev) return true;
+    if (score !== prev.score) return score > prev.score;
+    if (mvs !== prev.moves) return mvs < prev.moves;
+    return time < prev.time;
   }
 
   function saveBest(diff, score, mvs, time) {
@@ -104,7 +103,7 @@ let elapsed = 0;
     try {
       const raw = localStorage.getItem(key);
       const prev = raw ? JSON.parse(raw) : null;
-      if (!prev || mvs < prev.moves || (mvs === prev.moves && time < prev.time)) {
+      if (isBetterRun(score, mvs, time, prev)) {
         localStorage.setItem(key, JSON.stringify({ score, moves: mvs, time }));
       }
     } catch {}
@@ -131,7 +130,7 @@ let elapsed = 0;
   function calcScore() {
     const { pairs } = DIFFICULTIES[currentDiff];
     const timeBonus = Math.max(0, 300 - elapsed);
-    return pairs * 100 - moves * 5 + timeBonus;
+    return Math.max(0, pairs * 100 - moves * 5 + timeBonus);
   }
   function updateLiveScore() {
     if (!gameStarted || !liveScoreEl) return;
@@ -164,7 +163,7 @@ let elapsed = 0;
       el.style.animationDuration = (1.5 + Math.random() * 2) + "s";
       el.style.animationDelay = (Math.random() * 0.6) + "s";
       document.body.appendChild(el);
-      setTimeout(() => el.remove(), 4000);
+      setTimeout(() => el.remove(), 4500);
     }
   }
 
@@ -186,12 +185,14 @@ let elapsed = 0;
       card.className = "card";
       card.dataset.index = i;
       card.dataset.face = emoji;
+      card.setAttribute("role", "button");
+      card.tabIndex = 0;
+      card.setAttribute("aria-label", `Card ${i + 1}`);
       card.innerHTML = `
         <div class="card-inner">
           <div class="card-front"><span class="card-emoji">${emoji}</span></div>
           <div class="card-back"><img class="duck-icon" src="${duckSrc}" alt="back"></div>
         </div>`;
-      card.addEventListener("click", () => flipCard(card));
       grid.appendChild(card);
     });
   }
@@ -200,7 +201,7 @@ let elapsed = 0;
   function showHint() {
     if (hintShown) return;
     hintShown = true;
-    localStorage.setItem("goldutya-memory-hinted", "1");
+    try { localStorage.setItem("goldutya-memory-hinted", "1"); } catch {}
     const hintEl = document.createElement("div");
     hintEl.textContent = "FLIP CARDS TO MATCH";
     hintEl.style.cssText = "position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;font:700 5vw/1 'Bebas Neue',sans-serif;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,0.7);pointer-events:none;transition:opacity 0.6s;opacity:1;";
@@ -217,7 +218,7 @@ let elapsed = 0;
 
     ensureAudio();
     sfxFlip();
-    TG.haptic("light");
+    if (typeof TG !== "undefined" && TG.haptic) TG.haptic("light");
 
     card.classList.add("flipped");
     flippedCards.push(card);
@@ -274,11 +275,11 @@ let elapsed = 0;
   function handleWin() {
     stopTimer();
     sfxWin();
-    TG.haptic("success");
+    if (typeof TG !== "undefined" && TG.haptic) TG.haptic("success");
     const score = calcScore();
     const stars = getStars(moves, currentDiff);
     const prev = loadBestFor(currentDiff);
-    const isNewBest = !prev || score > prev.score || (score === prev.score && moves < prev.moves);
+    const isNewBest = isBetterRun(score, moves, elapsed, prev);
 
     saveBest(currentDiff, score, moves, elapsed);
     if (score > 0) { Leaderboard.addScore("memory", score, { moves, difficulty: currentDiff, stars }); }
@@ -303,6 +304,7 @@ let elapsed = 0;
   let timerStartMs = 0;
   let timerPaused = false;
   let timerAccumulated = 0;
+  let timerInterval = null;
 
   function startTimer() {
     elapsed = 0;
@@ -310,18 +312,24 @@ let elapsed = 0;
     timerStartMs = Date.now();
     timerPaused = false;
     timerEl.textContent = "00:00";
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(tickTimer, 1000);
   }
 
   function stopTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
     if (!timerPaused) {
       timerAccumulated += Date.now() - timerStartMs;
     }
     timerPaused = true;
+    elapsed = Math.floor(timerAccumulated / 1000);
   }
 
   function tickTimer() {
     if (timerPaused || !gameStarted) return;
-    elapsed = Math.floor((timerAccumulated + (Date.now() - timerStartMs)) / 1000);
+    const next = Math.floor((timerAccumulated + (Date.now() - timerStartMs)) / 1000);
+    if (next === elapsed) return;
+    elapsed = next;
     timerEl.textContent = fmtTime(elapsed);
     updateLiveScore();
   }
@@ -355,6 +363,19 @@ let elapsed = 0;
   }
 
   /* ── EVENTS ── */
+  grid.addEventListener("click", (e) => {
+    const card = e.target.closest(".card");
+    if (card) flipCard(card);
+  });
+
+  grid.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const card = e.target.closest(".card");
+    if (!card) return;
+    e.preventDefault();
+    flipCard(card);
+  });
+
   startBtn.addEventListener("click", resetGame);
 
   shareBtn.addEventListener("click", () => {
@@ -372,7 +393,7 @@ let elapsed = 0;
 
   muteBtn.addEventListener("click", () => {
     muted = !muted;
-    localStorage.setItem("goldutya-memory-mute", muted ? "1" : "0");
+    try { localStorage.setItem("goldutya-memory-mute", muted ? "1" : "0"); } catch {}
     muteBtn.innerHTML = muted ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
   });
 
@@ -396,7 +417,9 @@ let elapsed = 0;
   });
 
   /* ── INIT ── */
-  setInterval(tickTimer, 250);
+  diffBtns.querySelectorAll(".difficulty-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.diff === currentDiff);
+  });
   buildGrid();
   showBest();
   overlay.classList.add("visible");

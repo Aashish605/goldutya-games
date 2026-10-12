@@ -10,7 +10,8 @@ const Difficulty = (() => {
   }
 
   function getDiff(gameId) {
-    const val = localStorage.getItem(getKey(gameId));
+    let val = null;
+    try { val = localStorage.getItem(getKey(gameId)); } catch (e) {}
     return VALID.includes(val) ? val : DEFAULT_DIFF;
   }
 

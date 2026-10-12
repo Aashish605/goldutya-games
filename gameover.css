@@ -15,6 +15,9 @@
   text-align: center;
   z-index: 20;
   transition: opacity 0.3s;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .overlay.hidden { display: none; }
 
@@ -78,6 +81,11 @@
   margin-top: 4px;
 }
 .share-btn:active { transform: scale(0.96); }
+
+/* reduced motion: kill idle bob globally */
+@media (prefers-reduced-motion: reduce) {
+  .overlay-duck-img { animation: none; }
+}
 
 /* ── fly: medal + NEW BEST banner (fly-scoped) ── */
 .fly-page .medal {

@@ -33,17 +33,34 @@ let COIN_R = 16;
 let DUCK_W = 56;
 let DUCK_H = 47;
 let IS_MOBILE = false;
+let LOW_END = false;
+const REDUCED = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+let MAX_PARTICLES = 160;
+let skyTiles = {}, mountainTiles = {}, obstacleSprites = {};
+let cloudSprite = null;
+let spawnCounter = 0;
+
+function makeTile(w, h, draw) {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  draw(c.getContext("2d"), w, h);
+  return c;
+}
 
 function fitCanvas() {
   const rect = canvas.getBoundingClientRect();
   const cssW = Math.max(1, rect.width);
   const cssH = Math.max(1, rect.height);
-  DPR = window.devicePixelRatio || 1;
+  LOW_END = ((navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
+  DPR = Math.min(LOW_END ? 1.5 : 2, window.devicePixelRatio || 1);
+  MAX_PARTICLES = LOW_END ? 100 : 160;
   canvas.width = Math.round(cssW * DPR);
   canvas.height = Math.round(cssH * DPR);
   W = cssW;
   H = cssH;
-  IS_MOBILE = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform)) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
+  skyTiles = {}; mountainTiles = {}; obstacleSprites = {};
+  IS_MOBILE = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform())) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
   GROUND_H = Math.max(64, Math.round(H * 0.13));
 
   // Chrome Dino physics scaling — mobile gets softer gravity + stronger jump
@@ -82,7 +99,11 @@ const SKINS = [
   { name: "Rainbow", min: 50, filter: "hue-rotate(180deg) saturate(1.6)" },
   { name: "Ghost", min: 100, filter: "opacity(0.55) brightness(1.4)" },
 ];
-let unlockedSkins = JSON.parse(localStorage.getItem("goldutya-jump-skins") || "[0]");
+let unlockedSkins = [0];
+try {
+  unlockedSkins = JSON.parse(localStorage.getItem("goldutya-jump-skins") || "[0]");
+  if (!Array.isArray(unlockedSkins) || !unlockedSkins.length) unlockedSkins = [0];
+} catch (e) {}
 let activeSkin = unlockedSkins[unlockedSkins.length - 1] || 0;
 
 function unlockCheck(total) {
@@ -94,7 +115,7 @@ function unlockCheck(total) {
     }
   }
   if (changed) {
-    localStorage.setItem("goldutya-jump-skins", JSON.stringify(unlockedSkins));
+    try { localStorage.setItem("goldutya-jump-skins", JSON.stringify(unlockedSkins)); } catch (e) {}
     activeSkin = unlockedSkins[unlockedSkins.length - 1];
     updateSkinUI();
   }
@@ -153,12 +174,15 @@ let shieldTimer = 0, magnetTimer = 0;
 let nightPhase = 0, nightDir = 0, nightTimer = 0;
 let muteOn = false;
 let jumpBuffer = 0;
-let hintShown = localStorage.getItem("goldutya-jump-hinted") === "1";
+let hintShown = false;
+try { hintShown = localStorage.getItem("goldutya-jump-hinted") === "1"; } catch (e) {}
 let hintTimer = 0;
 
-best = Number(localStorage.getItem("goldutya-jump-best") || 0);
+best = 0;
+try { best = Number(localStorage.getItem("goldutya-jump-best") || 0); } catch (e) {}
 if (bestEl) bestEl.textContent = best;
-muteOn = localStorage.getItem("goldutya-jump-mute") === "1";
+muteOn = false;
+try { muteOn = localStorage.getItem("goldutya-jump-mute") === "1"; } catch (e) {}
 
 /* ---------- audio ---------- */
 let audioCtx = null;
@@ -192,7 +216,7 @@ function thud() { beep(110, 0.28, "sine", 0.28, 40); }
 
 /* ---------- share & UI ---------- */
 function shareScore() {
-  const total = score + coinCount * 10;
+  const total = score;
   const text = "I scored " + total + " in Goldutya Jump! " + (maxCombo > 1 ? "(" + maxCombo + "x combo!) " : "") + "Can you beat me? 🦆";
   if (navigator.share) {
     navigator.share({ title: "Goldutya Jump", text }).catch(() => {});
@@ -206,7 +230,7 @@ function shareScore() {
 
 function toggleMute() {
   muteOn = !muteOn;
-  localStorage.setItem("goldutya-jump-mute", muteOn ? "1" : "0");
+  try { localStorage.setItem("goldutya-jump-mute", muteOn ? "1" : "0"); } catch (e) {}
   if (muteBtn) muteBtn.innerHTML = muteOn ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
 }
 
@@ -256,6 +280,7 @@ function reset() {
   scoreScale = 1;
   combo = 0; maxCombo = 0;
   shieldTimer = 0; magnetTimer = 0;
+  spawnCounter = 0;
   nightPhase = 0; nightDir = 0; nightTimer = 0;
   jumpBuffer = 0;
   state = states.READY;
@@ -266,13 +291,15 @@ reset();
 
 /* ---------- popups ---------- */
 function addPopup(x, y, text, color, scale = 1) {
+  if (popups.length >= 12) return;
   popups.push({ x, y, text, color, life: 36, maxLife: 36, vy: -1.6, scale });
 }
-function updatePopups() {
+function updatePopups(f) {
+  f = f || 1;
   for (let i = popups.length - 1; i >= 0; i--) {
     const p = popups[i];
-    p.y += p.vy;
-    p.life--;
+    p.y += p.vy * f;
+    p.life -= f;
     if (p.life <= 0) popups.splice(i, 1);
   }
 }
@@ -382,10 +409,13 @@ function spawnObstacle() {
   obstacles.push(o);
 
   // Spawn Collectibles in reachable arc above ground
+  spawnCounter++;
+  const wantShield = spawnCounter % 8 === 0 || Math.random() < 0.15;
   const itemR = Math.random();
-  if (itemR > 0.2) {
+  if (itemR > 0.2 || wantShield) {
     let itemType = "coin";
     if (itemR > 0.85) itemType = "magnet";
+    if (wantShield) itemType = "shield";
 
     collectibles.push({
       x: W + OB_W + 55 + Math.random() * 80,
@@ -398,40 +428,55 @@ function spawnObstacle() {
   }
 }
 
-function drawObstacle(o) {
-  const n = nightPhase;
+function getObstacleSprites(o, n) {
+  const key = o.w + "-" + o.type + "-" + n;
+  let s = obstacleSprites[key];
+  if (s) return s;
+  const cap = 14;
+  const bodyH = Math.max(1, Math.round(o.h + 6 - cap));
   const r = Math.round(11 + n * 18);
   const g = Math.round(107 + n * 60);
   const b = Math.round(58 + n * 30);
 
-  const grad = ctx.createLinearGradient(o.x, 0, o.x + o.w, 0);
-  if (o.type === "moving") {
-    grad.addColorStop(0, "#b91c1c");
-    grad.addColorStop(0.5, "#ef4444");
-    grad.addColorStop(1, "#991b1b");
-  } else if (o.type === "tall") {
-    grad.addColorStop(0, "#7c2d12");
-    grad.addColorStop(0.5, "#d97706");
-    grad.addColorStop(1, "#7c2d12");
-  } else {
-    grad.addColorStop(0, "rgb(" + (r - 5) + "," + (g - 20) + "," + (b - 10) + ")");
-    grad.addColorStop(0.45, "rgb(" + r + "," + g + "," + b + ")");
-    grad.addColorStop(1, "rgb(" + (r - 5) + "," + (g - 20) + "," + (b - 10) + ")");
-  }
+  const body = makeTile(o.w, bodyH, (g2, w, hb) => {
+    const grad = g2.createLinearGradient(0, 0, w, 0);
+    if (o.type === "moving") {
+      grad.addColorStop(0, "#b91c1c");
+      grad.addColorStop(0.5, "#ef4444");
+      grad.addColorStop(1, "#991b1b");
+    } else if (o.type === "tall") {
+      grad.addColorStop(0, "#7c2d12");
+      grad.addColorStop(0.5, "#d97706");
+      grad.addColorStop(1, "#7c2d12");
+    } else {
+      grad.addColorStop(0, "rgb(" + (r - 5) + "," + (g - 20) + "," + (b - 10) + ")");
+      grad.addColorStop(0.45, "rgb(" + r + "," + g + "," + b + ")");
+      grad.addColorStop(1, "rgb(" + (r - 5) + "," + (g - 20) + "," + (b - 10) + ")");
+    }
+    g2.fillStyle = grad;
+    g2.fillRect(0, 0, w, hb);
+    g2.fillStyle = o.type === "moving" ? GOLD : (n > 0.3 ? "rgba(245,197,24,0.7)" : "rgba(245,197,24,0.55)");
+    g2.fillRect(2, 0, 4, hb);
+  });
 
+  const capTile = makeTile(o.w + 8, cap, (g2, w) => {
+    g2.fillStyle = o.type === "moving" ? "#7f1d1d" : "rgb(" + (r - 10) + "," + (g - 30) + "," + (b - 15) + ")";
+    g2.fillRect(0, 0, w, cap);
+  });
+
+  s = { body, cap: capTile };
+  obstacleSprites[key] = s;
+  return s;
+}
+
+function drawObstacle(o) {
+  const n = nightPhase;
+  const s = getObstacleSprites(o, n);
+  const cap = 14;
   // Draw crate body fully flush with ground line (extended 6px below ground to avoid gaps)
   const renderH = (H - GROUND_H - o.y) + 6;
-  ctx.fillStyle = grad;
-  ctx.fillRect(o.x, o.y, o.w, renderH);
-
-  // Top Cap
-  ctx.fillStyle = o.type === "moving" ? "#7f1d1d" : "rgb(" + (r - 10) + "," + (g - 30) + "," + (b - 15) + ")";
-  const cap = 14;
-  ctx.fillRect(o.x - 4, o.y, o.w + 8, cap);
-
-  // Stripe line accent
-  ctx.fillStyle = o.type === "moving" ? GOLD : (n > 0.3 ? "rgba(245,197,24,0.7)" : "rgba(245,197,24,0.55)");
-  ctx.fillRect(o.x + 2, o.y + cap, 4, renderH - cap);
+  ctx.drawImage(s.cap, o.x - 4, o.y);
+  ctx.drawImage(s.body, 0, 0, s.body.width, s.body.height, o.x, o.y + cap, o.w, renderH - cap);
 }
 
 function drawCollectible(c) {
@@ -466,6 +511,8 @@ function drawCollectible(c) {
 
 /* ---------- particles ---------- */
 function burst(x, y, color, n) {
+  n = Math.min(n, MAX_PARTICLES - particles.length);
+  if (n <= 0) return;
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2;
     const s = 1 + Math.random() * 4.5;
@@ -473,6 +520,7 @@ function burst(x, y, color, n) {
   }
 }
 function spawnDust(x, y) {
+  if (particles.length >= MAX_PARTICLES) return;
   for (let i = 0; i < 6; i++) {
     particles.push({
       x: x + (Math.random() - 0.5) * 20,
@@ -485,10 +533,11 @@ function spawnDust(x, y) {
     });
   }
 }
-function updateParticles() {
+function updateParticles(f) {
+  f = f || 1;
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.x += p.vx; p.y += p.vy; p.vy += 0.14; p.life--;
+    p.x += p.vx * f; p.y += p.vy * f; p.vy += 0.14 * f; p.life -= f;
     if (p.life <= 0) particles.splice(i, 1);
   }
 }
@@ -506,7 +555,6 @@ function drawParticles() {
 /* ---------- hint ---------- */
 function drawHint() {
   if (hintShown || hintTimer <= 0) return;
-  hintTimer--;
   ctx.save();
   ctx.globalAlpha = Math.min(1, hintTimer / 30);
   ctx.font = '700 ' + Math.round(H * 0.04) + 'px "Bebas Neue", sans-serif';
@@ -514,10 +562,6 @@ function drawHint() {
   ctx.fillStyle = "#fff";
   ctx.fillText("TAP TO JUMP", W / 2, H / 2);
   ctx.restore();
-  if (hintTimer <= 0 && !hintShown) {
-    hintShown = true;
-    localStorage.setItem("goldutya-jump-hinted", "1");
-  }
 }
 
 /* ---------- input & jump mechanics ---------- */
@@ -542,7 +586,6 @@ function doJump() {
     duck.scaleX = 0.72;
     duck.scaleY = 1.35;
     duck.targetRot = -0.35;
-    combo = 0;
     quack();
     burst(duck.x - 10, duck.y + 16, GOLD, 5);
   } else if (duck.jumpsLeft > 0) {
@@ -572,6 +615,13 @@ function tap(e) {
 
 document.addEventListener("keydown", handleKey);
 canvas.addEventListener("pointerdown", tap);
+overlay.addEventListener("pointerdown", (e) => {
+  if (e.target.closest("button, a, input")) return;
+  doJump();
+});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && state === states.PLAY) togglePause();
+});
 if (startBtn) startBtn.addEventListener("click", (e) => { e.stopPropagation(); doJump(); });
 if (pauseBtn) pauseBtn.addEventListener("click", (e) => { e.stopPropagation(); togglePause(); });
 
@@ -604,11 +654,11 @@ function gameOver() {
   burst(duck.x, duck.y, RED, 18);
   burst(duck.x, duck.y, GOLD, 10);
 
-  const total = score + coinCount * 10;
+  const total = score;
   unlockCheck(total);
   if (total > best) {
     best = total;
-    localStorage.setItem("goldutya-jump-best", String(best));
+    try { localStorage.setItem("goldutya-jump-best", String(best)); } catch (e) {}
     if (bestEl) bestEl.textContent = best;
   }
   if (total > 0) { Leaderboard.addScore("jump", total, { coins: coinCount, combo: maxCombo }); }
@@ -647,65 +697,86 @@ function initClouds() {
 }
 initClouds();
 
+function getMountainTile(layer, n) {
+  const key = layer + "-" + (n > 0.4 ? 1 : 0);
+  let c = mountainTiles[key];
+  if (c) return c;
+  const night = n > 0.4;
+  const th = Math.max(1, Math.round(H * (layer === "far" ? 0.18 : 0.1)));
+  const tw = Math.max(1, Math.round(W * (layer === "far" ? 2.7 : 1.9)));
+  c = makeTile(tw, th, (g2, w, h) => {
+    g2.fillStyle = layer === "far"
+      ? (night ? "rgba(10,25,50,0.45)" : "rgba(20,50,85,0.35)")
+      : (night ? "rgba(8,35,65,0.6)" : "rgba(15,70,110,0.5)");
+    g2.beginPath();
+    g2.moveTo(0, h);
+    if (layer === "far") {
+      g2.lineTo(W * 0.2, h - H * 0.14);
+      g2.lineTo(W * 0.5, h);
+      g2.lineTo(W * 0.8, h - H * 0.18);
+      g2.lineTo(W * 1.2, h);
+      g2.lineTo(W * 1.5, h - H * 0.13);
+      g2.lineTo(W * 1.9, h);
+    } else {
+      g2.lineTo(W * 0.15, h - H * 0.08);
+      g2.lineTo(W * 0.35, h);
+      g2.lineTo(W * 0.6, h - H * 0.1);
+      g2.lineTo(W * 0.85, h);
+      g2.lineTo(W * 1.1, h - H * 0.07);
+      g2.lineTo(W * 1.3, h);
+    }
+    g2.lineTo(w, h);
+    g2.closePath();
+    g2.fill();
+  });
+  mountainTiles[key] = c;
+  return c;
+}
+
 function drawMountains() {
   const n = nightPhase;
   const gy = H - GROUND_H;
 
   // Far mountains
-  ctx.fillStyle = n > 0.4 ? "rgba(10,25,50,0.45)" : "rgba(20,50,85,0.35)";
-  ctx.beginPath();
   const offFar = (frame * speed * 0.15) % (W * 0.8);
-  ctx.moveTo(-offFar, gy);
-  ctx.lineTo(-offFar + W * 0.2, gy - H * 0.14);
-  ctx.lineTo(-offFar + W * 0.5, gy);
-  ctx.lineTo(-offFar + W * 0.8, gy - H * 0.18);
-  ctx.lineTo(-offFar + W * 1.2, gy);
-  ctx.lineTo(-offFar + W * 1.5, gy - H * 0.13);
-  ctx.lineTo(-offFar + W * 1.9, gy);
-  ctx.fill();
+  const farTile = getMountainTile("far", n);
+  ctx.drawImage(farTile, -offFar, gy - farTile.height);
 
   // Mid mountains
-  ctx.fillStyle = n > 0.4 ? "rgba(8,35,65,0.6)" : "rgba(15,70,110,0.5)";
-  ctx.beginPath();
   const offMid = (frame * speed * 0.3) % (W * 0.6);
-  ctx.moveTo(-offMid, gy);
-  ctx.lineTo(-offMid + W * 0.15, gy - H * 0.08);
-  ctx.lineTo(-offMid + W * 0.35, gy);
-  ctx.lineTo(-offMid + W * 0.6, gy - H * 0.1);
-  ctx.lineTo(-offMid + W * 0.85, gy);
-  ctx.lineTo(-offMid + W * 1.1, gy - H * 0.07);
-  ctx.lineTo(-offMid + W * 1.3, gy);
-  ctx.fill();
+  const midTile = getMountainTile("mid", n);
+  ctx.drawImage(midTile, -offMid, gy - midTile.height);
 }
 
 /* ---------- update ---------- */
-function update() {
-  frame++;
-  duck.t++;
+function update(f) {
+  f = f || 1;
+  frame += f;
+  duck.t += f;
 
   if (shakeDur > 0) {
-    shakeDur--;
+    shakeDur -= f;
     shakeX = (Math.random() - 0.5) * shakeDur * 1.2;
     shakeY = (Math.random() - 0.5) * shakeDur * 1.2;
   } else { shakeX = 0; shakeY = 0; }
 
-  if (deathFlash > 0) deathFlash--;
-  if (scoreScale > 1.01) scoreScale += (1 - scoreScale) * 0.12;
+  if (deathFlash > 0) deathFlash -= f;
+  if (scoreScale > 1.01) scoreScale += (1 - scoreScale) * 0.12 * f;
 
   // Lerp duck scale back to 1
-  duck.scaleX += (1 - duck.scaleX) * 0.14;
-  duck.scaleY += (1 - duck.scaleY) * 0.14;
+  duck.scaleX += (1 - duck.scaleX) * 0.14 * f;
+  duck.scaleY += (1 - duck.scaleY) * 0.14 * f;
 
-  if (jumpBuffer > 0) jumpBuffer--;
+  if (jumpBuffer > 0) jumpBuffer -= f;
 
   for (const c of cloudList) {
-    const spd = (state === states.PLAY ? speed : speed * 0.25) * c.speed;
+    const spd = (state === states.PLAY ? speed : speed * 0.25) * c.speed * f;
     c.x -= spd;
     if (c.x < -100) { c.x = W + 60 + Math.random() * 120; c.y = H * (0.05 + Math.random() * 0.45); }
   }
 
   if (nightDir !== 0) {
-    nightTimer--;
+    nightTimer -= f;
     if (nightTimer <= 0) {
       if (nightDir === 1) { nightPhase = 1; nightDir = -1; nightTimer = 60; }
       else { nightPhase = 0; nightDir = 0; }
@@ -715,8 +786,8 @@ function update() {
   if (state === states.READY) {
     duck.y = groundY() + Math.sin(duck.t * 0.12) * 3;
     duck.rot = Math.sin(duck.t * 0.12) * 0.05;
-    updateParticles();
-    updatePopups();
+    updateParticles(f);
+    updatePopups(f);
     return;
   }
 
@@ -724,17 +795,17 @@ function update() {
 
   if (state === states.OVER) {
     if (duck.isDying) {
-      duck.deathVy += GRAVITY;
-      duck.y += duck.deathVy;
-      duck.rot += duck.deathRot;
+      duck.deathVy += GRAVITY * f;
+      duck.y += duck.deathVy * f;
+      duck.rot += duck.deathRot * f;
     }
-    updateParticles();
-    updatePopups();
+    updateParticles(f);
+    updatePopups(f);
     return;
   }
 
   // Chrome Dino exact per-frame acceleration (0.001 px/frame^2)
-  speed = Math.min(MAX_SPEED, speed + 0.001);
+  speed = Math.min(MAX_SPEED, speed + 0.001 * f);
 
   const effectiveSpeed = speed;
 
@@ -743,7 +814,7 @@ function update() {
     duck.coyote = 6;
     duck.jumpsLeft = 2;
   } else if (duck.coyote > 0) {
-    duck.coyote--;
+    duck.coyote -= f;
   }
 
   // Check jump buffer
@@ -753,10 +824,10 @@ function update() {
   }
 
   // Physics
-  duck.vy += GRAVITY;
-  duck.y += duck.vy;
+  duck.vy += GRAVITY * f;
+  duck.y += duck.vy * f;
   duck.targetRot = Math.max(-0.45, Math.min(0.5, duck.vy * 0.04));
-  duck.rot += (duck.targetRot - duck.rot) * 0.1;
+  duck.rot += (duck.targetRot - duck.rot) * 0.1 * f;
 
   // Ground contact
   if (duck.y >= groundY()) {
@@ -775,12 +846,19 @@ function update() {
   }
 
   // Timers
-  if (shieldTimer > 0) shieldTimer--;
-  if (magnetTimer > 0) magnetTimer--;
-  if (invuln > 0) invuln--;
+  if (hintTimer > 0) {
+    hintTimer -= f;
+    if (hintTimer <= 0 && !hintShown) {
+      hintShown = true;
+      try { localStorage.setItem("goldutya-jump-hinted", "1"); } catch (e) {}
+    }
+  }
+  if (shieldTimer > 0) shieldTimer -= f;
+  if (magnetTimer > 0) magnetTimer -= f;
+  if (invuln > 0) invuln -= f;
 
   // Running particles
-  if (duck.onGround && frame % 4 === 0) {
+  if (duck.onGround && Math.floor(frame) % 4 === 0 && particles.length < MAX_PARTICLES) {
     particles.push({
       x: duck.x - duck.w * 0.3,
       y: duck.y + duck.h * 0.35,
@@ -794,29 +872,39 @@ function update() {
 
   // Update obstacles
   for (const o of obstacles) {
-    o.x -= effectiveSpeed;
+    o.x -= effectiveSpeed * f;
     if (o.type === "moving") {
       o.y = o.baseY + Math.sin(frame * 0.05 + o.phase) * 10;
     }
   }
-  obstacles = obstacles.filter(o => o.x + o.w > -30);
+  let w = 0;
+  for (let i = 0; i < obstacles.length; i++) {
+    const o = obstacles[i];
+    if (o.x + o.w > -30) obstacles[w++] = o;
+  }
+  obstacles.length = w;
 
   // Update collectibles
   for (const c of collectibles) {
-    c.x -= effectiveSpeed;
+    c.x -= effectiveSpeed * f;
 
     // Magnet effect
     if (magnetTimer > 0 && !c.collected) {
       const dx = duck.x - c.x;
       const dy = duck.y - c.y;
       const dist = Math.hypot(dx, dy);
-      if (dist < 260) {
-        c.x += (dx / dist) * 8;
-        c.y += (dy / dist) * 8;
+      if (dist > 1 && dist < 260) {
+        c.x += (dx / dist) * 8 * f;
+        c.y += (dy / dist) * 8 * f;
       }
     }
   }
-  collectibles = collectibles.filter(c => c.x + c.r > -30 && !c.collected);
+  w = 0;
+  for (let i = 0; i < collectibles.length; i++) {
+    const c = collectibles[i];
+    if (c.x + c.r > -30 && !c.collected) collectibles[w++] = c;
+  }
+  collectibles.length = w;
 
   // Spawn new obstacles with Chrome Dino distance formula (wide jump gap + speed scaling + random variance)
   const last = obstacles[obstacles.length - 1];
@@ -860,6 +948,20 @@ function update() {
         coinBlip();
         burst(c.x, c.y, GOLD, 10);
         addPopup(c.x, c.y, "+10 GOLD", GOLD2, 1.1);
+  } else if (c.type === "shield") {
+    ctx.fillStyle = CYAN;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, c.r * scaleX, c.r, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath();
+    ctx.ellipse(-c.r * 0.22 * scaleX, -c.r * 0.22, c.r * 0.4 * scaleX, c.r * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+      } else if (c.type === "shield") {
+        shieldTimer = 480;
+        shieldBlip();
+        burst(c.x, c.y, CYAN, 10);
+        addPopup(c.x, c.y, "SHIELD!", CYAN, 1.1);
       } else if (c.type === "magnet") {
         magnetTimer = 320;
         magnetBlip();
@@ -869,8 +971,8 @@ function update() {
     }
   }
 
-  updateParticles();
-  updatePopups();
+  updateParticles(f);
+  updatePopups(f);
 
   // Collision check
   if (invuln <= 0) {
@@ -881,16 +983,45 @@ function update() {
 }
 
 /* ---------- sky / ground ---------- */
-function drawSky() {
+function getSkyTile(n) {
+  const key = n > 0.4 ? "night" : "day";
+  let c = skyTiles[key];
+  if (c) return c;
+  const nn = n > 0.4 ? 1 : 0;
   const dayTop = [26, 58, 102], nightTop = [8, 15, 30];
   const dayBot = [18, 48, 72], nightBot = [4, 8, 18];
+  c = makeTile(Math.max(1, Math.round(W)), Math.max(1, Math.round(H)), (g2, w, h) => {
+    const g = g2.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "rgb(" + Math.round(dayTop[0] * (1 - nn) + nightTop[0] * nn) + "," + Math.round(dayTop[1] * (1 - nn) + nightTop[1] * nn) + "," + Math.round(dayTop[2] * (1 - nn) + nightTop[2] * nn) + ")");
+    g.addColorStop(0.55, "rgb(" + Math.round(dayTop[0] * 0.85 * (1 - nn) + nightTop[0] * 0.85 * nn) + "," + Math.round(dayTop[1] * 0.85 * (1 - nn) + nightTop[1] * 0.85 * nn) + "," + Math.round(dayTop[2] * 0.9 * (1 - nn) + nightTop[2] * 0.9 * nn) + ")");
+    g.addColorStop(1, "rgb(" + Math.round(dayBot[0] * (1 - nn) + nightBot[0] * nn) + "," + Math.round(dayBot[1] * (1 - nn) + nightBot[1] * nn) + "," + Math.round(dayBot[2] * (1 - nn) + nightBot[2] * nn) + ")");
+    g2.fillStyle = g;
+    g2.fillRect(0, 0, w, h);
+  });
+  skyTiles[key] = c;
+  return c;
+}
+
+function getCloudSprite() {
+  if (cloudSprite) return cloudSprite;
+  cloudSprite = makeTile(128, 64, (g2) => {
+    const puffs = [[64, 34, 26], [94, 38, 20], [40, 40, 18]];
+    for (const [cx, cy, r] of puffs) {
+      const rg = g2.createRadialGradient(cx, cy, r * 0.3, cx, cy, r);
+      rg.addColorStop(0, "rgba(255,255,255,0.95)");
+      rg.addColorStop(1, "rgba(255,255,255,0)");
+      g2.fillStyle = rg;
+      g2.beginPath();
+      g2.arc(cx, cy, r, 0, Math.PI * 2);
+      g2.fill();
+    }
+  });
+  return cloudSprite;
+}
+
+function drawSky() {
   const n = nightPhase;
-  const g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "rgb(" + Math.round(dayTop[0] * (1 - n) + nightTop[0] * n) + "," + Math.round(dayTop[1] * (1 - n) + nightTop[1] * n) + "," + Math.round(dayTop[2] * (1 - n) + nightTop[2] * n) + ")");
-  g.addColorStop(0.55, "rgb(" + Math.round(dayTop[0] * 0.85 * (1 - n) + nightTop[0] * 0.85 * n) + "," + Math.round(dayTop[1] * 0.85 * (1 - n) + nightTop[1] * 0.85 * n) + "," + Math.round(dayTop[2] * 0.9 * (1 - n) + nightTop[2] * 0.9 * n) + ")");
-  g.addColorStop(1, "rgb(" + Math.round(dayBot[0] * (1 - n) + nightBot[0] * n) + "," + Math.round(dayBot[1] * (1 - n) + nightBot[1] * n) + "," + Math.round(dayBot[2] * (1 - n) + nightBot[2] * n) + ")");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(getSkyTile(n), 0, 0);
 
   if (n > 0.4) {
     ctx.fillStyle = "rgba(255,255,255," + ((n - 0.4) * 0.6) + ")";
@@ -899,15 +1030,12 @@ function drawSky() {
 
   drawMountains();
 
-  ctx.globalAlpha = 1;
+  const cloud = getCloudSprite();
   for (const c of cloudList) {
-    ctx.fillStyle = "rgba(255,255,255," + (c.alpha * (1 - n * 0.5)) + ")";
-    ctx.beginPath();
-    ctx.ellipse(c.x, c.y, 48 * c.size, 18 * c.size, 0, 0, Math.PI * 2);
-    ctx.ellipse(c.x + 28 * c.size, c.y + 4, 32 * c.size, 14 * c.size, 0, 0, Math.PI * 2);
-    ctx.ellipse(c.x - 24 * c.size, c.y + 6, 28 * c.size, 12 * c.size, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.globalAlpha = c.alpha * (1 - n * 0.5);
+    ctx.drawImage(cloud, c.x - 64 * c.size, c.y - 32 * c.size, 128 * c.size, 64 * c.size);
   }
+  ctx.globalAlpha = 1;
 }
 
 function drawGround() {
@@ -928,7 +1056,7 @@ function drawGround() {
 
 function drawHUD() {
   if (state === states.READY) return;
-  const total = score + coinCount * 10;
+  const total = score;
   const size = Math.max(42, Math.round(H * 0.07)) * scoreScale;
   ctx.save();
   ctx.font = "700 " + Math.round(size) + 'px "Bebas Neue", sans-serif';
@@ -977,11 +1105,6 @@ function render() {
   ctx.save();
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-  if (deathFlash > 0) {
-    ctx.fillStyle = "rgba(255,255,255," + (deathFlash / 12) + ")";
-    ctx.fillRect(0, 0, W, H);
-  }
-
   ctx.translate(shakeX, shakeY);
   ctx.clearRect(-10, -10, W + 20, H + 20);
 
@@ -1010,11 +1133,21 @@ function render() {
     ctx.fillText("Tap ⏸ to resume", W / 2, H * 0.52);
   }
 
+  if (deathFlash > 0) {
+    ctx.fillStyle = "rgba(255,255,255," + (deathFlash / 12) + ")";
+    ctx.fillRect(0, 0, W, H);
+  }
+
   ctx.restore();
 }
 
-function loop() {
-  update();
+let lastT = 0;
+function loop(t) {
+  if (!lastT) lastT = t;
+  const dtMs = Math.min(50, t - lastT);
+  lastT = t;
+  const f = Math.min(2.5, dtMs / 16.6667);
+  update(f);
   render();
   requestAnimationFrame(loop);
 }

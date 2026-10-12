@@ -44,9 +44,11 @@ const IM = {
 
 /* ---------------- audio ---------------- */
 
-let muted = localStorage.getItem(MUTE_KEY) === "1";
+let muted = false;
+try {
+  muted = localStorage.getItem(MUTE_KEY) === "1";
+} catch (e) {}
 let audioReady = false;
-let audioCtx = null;
 
 const SND = {};
 ["jump", "land", "fall", "nest", "bg"].forEach((n) => {
@@ -62,11 +64,6 @@ const SND = {};
 function initAudio() {
   if (audioReady) return;
   audioReady = true;
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  } catch (e) {
-    audioCtx = null;
-  }
   if (!muted) SND.bg.play().catch(() => {});
 }
 
@@ -80,7 +77,9 @@ function play(name) {
 
 function setMuted(v) {
   muted = v;
-  localStorage.setItem(MUTE_KEY, v ? "1" : "0");
+  try {
+    localStorage.setItem(MUTE_KEY, v ? "1" : "0");
+  } catch (e) {}
   if (muted) {
     SND.bg.pause();
   } else if (state === "play" || state === "menu") {
@@ -111,7 +110,10 @@ function fitCanvas() {
   const rect = canvas.getBoundingClientRect();
   const cssW = Math.max(1, rect.width);
   const cssH = Math.max(1, rect.height);
-  DPR = window.devicePixelRatio || 1;
+  const LOW_END =
+    (navigator.deviceMemory && navigator.deviceMemory <= 4) ||
+    (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4);
+  DPR = Math.min(LOW_END ? 1.5 : 2, window.devicePixelRatio || 1);
   canvas.width = Math.round(cssW * DPR);
   canvas.height = Math.round(cssH * DPR);
   W = cssW;
@@ -126,7 +128,15 @@ function fitCanvas() {
 window.addEventListener("resize", () => {
   fitCanvas();
   layoutMetrics();
+  renderedPause = false;
 });
+if (typeof ResizeObserver !== "undefined") {
+  new ResizeObserver(() => {
+    fitCanvas();
+    layoutMetrics();
+    renderedPause = false;
+  }).observe(canvas);
+}
 
 /* ---------------- difficulty ---------------- */
 
@@ -145,7 +155,12 @@ let egg = null; // {x, y, vy, phase:'rest'|'fly', squash}
 let camY = 0;
 let lives = LIVES_MAX;
 let score = 0;
-let best = Number(localStorage.getItem(BEST_KEY) || 0);
+let best = 0;
+let bestSaved = 0;
+try {
+  best = Number(localStorage.getItem(BEST_KEY) || 0);
+  bestSaved = best;
+} catch (e) {}
 let lastScoredIdx = 0;
 let lastBasket = null;
 let topIdx = 0;
@@ -158,6 +173,7 @@ let floaters = []; // {x, y, text, color, life, vy}
 let particles = []; // {x, y, vx, vy, life, color, size, rot, vr}
 let rings = [];
 let deadT = 0; // respawn timer after life lost
+let lostThisFall = false;
 
 const BASKET_AR = 512 / 264;
 const EGG_AR = 256 / 324;
@@ -216,6 +232,7 @@ function resetWorld() {
   shakeT = 0;
   lifeFlash = 0;
   deadT = 0;
+  lostThisFall = false;
   hintT = 0;
 
   const start = makeBasket(0, W / 2, 0, false, 0);
@@ -367,12 +384,13 @@ function loseLife() {
   if (lives <= 0) {
     gameOver();
   } else {
-    addFloater(W / 2, H * 0.4, "LIFE LOST", "#ff5d7a");
+    addFloater(W / 2, camY + H * 0.35, "LIFE LOST", "#ff5d7a");
     deadT = 45;
   }
 }
 
 function respawn() {
+  if (!baskets.includes(lastBasket)) lastBasket = baskets[0];
   egg.x = lastBasket.x;
   egg.y = restY(lastBasket) + H * 0.18;
   egg.vy = -2.2;
@@ -385,21 +403,21 @@ function respawn() {
 function gameOver() {
   state = "gameover";
   SND.bg.pause();
-  if (score > best) {
-    best = score;
+  try {
     localStorage.setItem(BEST_KEY, String(best));
-  }
+  } catch (e) {}
   bestEl.textContent = best;
   try {
     Leaderboard.addScore("eggjump", score, { combo: maxCombo });
   } catch (e) {}
   showGameOver();
+  bestSaved = best;
 }
 
 function showGameOver() {
   overlayTitle.textContent = "GAME OVER";
   overlaySub.textContent =
-    score >= best && score > 0 ? "NEW BEST! The nests respect you." : "The egg broke. Shake it off.";
+    score > bestSaved && score > 0 ? "NEW BEST! The nests respect you." : "The egg broke. Shake it off.";
   overlayScore.hidden = false;
   finalScore.textContent = score;
   startBtn.textContent = "PLAY AGAIN";
@@ -431,6 +449,7 @@ function onPointer(e) {
   if (state === "play") {
     if (paused) {
       paused = false;
+      if (!muted) SND.bg.play().catch(() => {});
       return;
     }
     jump();
@@ -445,15 +464,23 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "Space" || e.code === "ArrowUp" || e.code === "KeyW") {
     if (state === "play") {
       e.preventDefault();
+      if (e.repeat) return;
       initAudio();
-      if (paused) paused = false;
-      else jump();
+      if (paused) {
+        paused = false;
+        if (!muted) SND.bg.play().catch(() => {});
+      } else jump();
     }
   }
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden" && state === "play") paused = true;
+  if (document.visibilityState === "hidden") {
+    if (state === "play") paused = true;
+    SND.bg.pause();
+  } else if (state === "play" && !paused && !muted) {
+    SND.bg.play().catch(() => {});
+  }
 });
 
 startBtn.addEventListener("click", (e) => {
@@ -527,6 +554,7 @@ function update(dt) {
         egg.x = b.x;
         egg.y = restY(b);
       } else if (egg.phase === "fly") {
+        const prevBottom = egg.y - EH / 2;
         egg.vy -= G * f;
         egg.y += egg.vy * f;
 
@@ -539,7 +567,7 @@ function update(dt) {
             if (b.idx <= lastScoredIdx) continue;
             const top = b.y + b.h / 2;
             const deep = top - b.h * 0.95;
-            if (bottom <= top + 2 && bottom >= deep) {
+            if (bottom <= top + 2 && prevBottom >= deep) {
               const dx = egg.x - b.x;
               const adx = Math.abs(dx);
               if (adx <= cleanZone(b)) {
@@ -558,11 +586,14 @@ function update(dt) {
         }
 
         // fell below the basket it left → life lost
-        if (egg.phase === "fly" && !egg.dropping && egg.y < lastBasket.y - H * 0.30) {
+        if (
+          !lostThisFall &&
+          egg.phase === "fly" &&
+          !egg.dropping &&
+          (egg.y < lastBasket.y - H * 0.30 || screenY(egg.y) > H + 120)
+        ) {
+          lostThisFall = true;
           loseLife();
-        }
-        if (egg.phase === "fly" && !egg.dropping && screenY(egg.y) > H + 120) {
-          if (state === "play" && lives > 0) loseLife();
         }
       }
     }
@@ -572,8 +603,7 @@ function update(dt) {
 
     // cull + spawn
     while (baskets.length > 2 && screenY(baskets[0].y) > H + 260) {
-      const removed = baskets.shift();
-      if (lastBasket && removed.idx === lastBasket.idx) lastBasket = baskets[0];
+      baskets.shift();
     }
     spawnAhead();
   }
@@ -586,17 +616,32 @@ function update(dt) {
     p.rot += (p.vr || 0) * f;
     p.life -= f;
   }
-  particles = particles.filter((p) => p.life > 0);
+  let w = 0;
+  for (let i = 0; i < particles.length; i++) {
+    const o = particles[i];
+    if (o.life > 0) particles[w++] = o;
+  }
+  particles.length = w;
   for (const t of floaters) {
     t.y += t.vy * f;
     t.life -= f;
   }
-  floaters = floaters.filter((t) => t.life > 0);
+  w = 0;
+  for (let i = 0; i < floaters.length; i++) {
+    const o = floaters[i];
+    if (o.life > 0) floaters[w++] = o;
+  }
+  floaters.length = w;
   for (const r of rings) {
     r.t += f;
     r.life -= f;
   }
-  rings = rings.filter((r) => r.life > 0);
+  w = 0;
+  for (let i = 0; i < rings.length; i++) {
+    const o = rings[i];
+    if (o.life > 0) rings[w++] = o;
+  }
+  rings.length = w;
   if (egg && egg.squash > 0) egg.squash = Math.max(0, egg.squash - 0.06 * f);
 }
 
@@ -609,6 +654,7 @@ function land(b, isRespawn) {
   egg.squash = 0.45;
   egg.tipped = false;
   egg.perchB = null;
+  lostThisFall = false;
   lastBasket = b;
   rings.push({ x: b.x, y: b.y, t: 0, life: 26 });
 
@@ -624,7 +670,6 @@ function land(b, isRespawn) {
     score++;
     if (score > best) {
       best = score;
-      localStorage.setItem(BEST_KEY, String(best));
       bestEl.textContent = best;
     }
     if (perfect) {
@@ -821,12 +866,16 @@ function render() {
 /* ---------------- loop ---------------- */
 
 let lastT = performance.now();
+let renderedPause = false;
 
 function loop(t) {
   const dt = Math.min(50, t - lastT);
   lastT = t;
   update(dt);
-  render();
+  if (!paused || !renderedPause) {
+    renderedPause = paused;
+    render();
+  }
   requestAnimationFrame(loop);
 }
 

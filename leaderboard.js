@@ -5,13 +5,17 @@ const Leaderboard = (() => {
   const STORAGE_KEY = "goldutya-leaderboard";
 
   function getAll() {
-    if (!localStorage.getItem("goldutya-lb-wiped")) {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.setItem("goldutya-lb-wiped", "1");
-    }
     try {
+      if (!localStorage.getItem("goldutya-lb-wiped")) {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.setItem("goldutya-lb-wiped", "1");
+      }
       return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     } catch { return {}; }
+  }
+
+  function setAll(all) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(all)); } catch (e) {}
   }
 
   function getGame(gameId) {
@@ -21,7 +25,8 @@ const Leaderboard = (() => {
 
   function resolveName() {
     const user = TG.user();
-    const stored = localStorage.getItem("goldutya-player-name");
+    let stored = null;
+    try { stored = localStorage.getItem("goldutya-player-name"); } catch (e) {}
     if (user) return user.username || user.firstName || "Anonymous";
     if (stored) return stored;
     return "Anonymous";
@@ -54,7 +59,7 @@ const Leaderboard = (() => {
 
     all[gameId].sort((a, b) => b.score - a.score);
     all[gameId] = all[gameId].slice(0, 100);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    setAll(all);
     return all[gameId];
   }
 
@@ -80,7 +85,17 @@ const Leaderboard = (() => {
   function clearGame(gameId) {
     const all = getAll();
     delete all[gameId];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    setAll(all);
+  }
+
+  function esc(s) {
+    const map = {};
+    map["&"] = "&" + "amp;";
+    map["<"] = "&" + "lt;";
+    map[">"] = "&" + "gt;";
+    map['"'] = "&" + "quot;";
+    map["'"] = "&" + "#39;";
+    return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => map[c]);
   }
 
   function promptName() {
@@ -100,14 +115,14 @@ const Leaderboard = (() => {
       html += '<div class="lb-empty">No scores yet. Be the first!</div>';
     } else {
       html += '<div class="lb-list">';
+      const me = TG.user();
       top.forEach((e, i) => {
-        const user = TG.user();
-        const isMe = user && e.userId === user.id;
+        const isMe = me && e.userId === me.id;
         const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : (i + 1);
         html += '<div class="lb-row' + (isMe ? ' lb-me' : '') + '">';
         html += '<span class="lb-rank">' + medal + '</span>';
-        html += '<span class="lb-name">' + (e.name || "Anonymous") + '</span>';
-        html += '<span class="lb-score">' + e.score + '</span>';
+        html += '<span class="lb-name">' + esc(e.name || "Anonymous") + '</span>';
+        html += '<span class="lb-score">' + Number(e.score) + '</span>';
         html += '</div>';
       });
       html += '</div>';

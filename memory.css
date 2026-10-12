@@ -28,6 +28,7 @@ body {
   width: 100vw;
   height: 100vh;
   height: 100dvh;
+  height: 100svh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -145,6 +146,8 @@ body {
   justify-content: center;
   align-items: center;
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 8px 12px;
   max-width: 520px;
   width: 100%;
@@ -162,6 +165,10 @@ body {
   grid-template-columns: repeat(6, 1fr);
 }
 
+.grid-easy .card { max-width: min(110px, 16svh); }
+.grid-medium .card { max-width: min(110px, 12svh); }
+.grid-hard .card { max-width: min(110px, 10svh); }
+
 /* ── CARD ── */
 .card {
   perspective: 600px;
@@ -170,6 +177,11 @@ body {
   max-width: 110px;
   width: 100%;
   justify-self: center;
+}
+
+.card:focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 2px;
 }
 
 .card-inner {
@@ -255,11 +267,14 @@ body {
 /* ── OVERLAY (opacity-gated; gameover.css supplies base styling) ── */
 .overlay {
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
+  transition: opacity 0.3s, visibility 0.3s;
 }
 
 .overlay.visible {
   opacity: 1;
+  visibility: visible;
   pointer-events: all;
 }
 

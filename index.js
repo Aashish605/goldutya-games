@@ -1,10 +1,10 @@
 const GAMES = [
-  { id: "fly", name: "Goldutya Fly", file: "fly.html", cat: "arcade", catLabel: "Arcade", image: "assets/card-fly.png", bestKey: "goldutya-fly-best", badge: "HOT" },
-  { id: "jump", name: "Goldutya Jump", file: "jump.html", cat: "runner", catLabel: "Runner", image: "assets/card-jump.png", bestKey: "goldutya-jump-best", badge: "POPULAR" },
-  { id: "clicker", name: "Goldutya Clicker", file: "clicker.html", cat: "tap-to-earn", catLabel: "Tap-to-Earn", image: "assets/card-clicker.png", bestKey: "goldutya-clicker-best", badge: "NEW" },
-  { id: "memory", name: "Goldutya Memory", file: "memory.html", cat: "puzzle", catLabel: "Puzzle", image: "assets/card-memory.png", bestKey: "goldutya-memory-best", badge: "POPULAR" },
-  { id: "snake", name: "Goldutya Snake", file: "snake.html", cat: "classic", catLabel: "Classic", image: "assets/card-snake.png", bestKey: "goldutya-snake-best", badge: "CLASSIC" },
-  { id: "breakout", name: "Goldutya Breakout", file: "breakout.html", cat: "action", catLabel: "Action", image: "assets/card-breakout.png", bestKey: "goldutya-breakout-best", badge: "HOT" },
+  { id: "fly", name: "Goldutya Fly", file: "fly.html", cat: "arcade", catLabel: "Arcade", image: "assets/card-fly.webp", bestKey: "goldutya-fly-best", badge: "HOT" },
+  { id: "jump", name: "Goldutya Jump", file: "jump.html", cat: "runner", catLabel: "Runner", image: "assets/card-jump.webp", bestKey: "goldutya-jump-best", badge: "POPULAR" },
+  { id: "clicker", name: "Goldutya Clicker", file: "clicker.html", cat: "tap-to-earn", catLabel: "Tap-to-Earn", image: "assets/card-clicker.webp", bestKey: "goldutya-clicker-best", badge: "NEW" },
+  { id: "memory", name: "Goldutya Memory", file: "memory.html", cat: "puzzle", catLabel: "Puzzle", image: "assets/card-memory.webp", bestKey: "goldutya-memory-best", badge: "POPULAR" },
+  { id: "snake", name: "Goldutya Snake", file: "snake.html", cat: "classic", catLabel: "Classic", image: "assets/card-snake.webp", bestKey: "goldutya-snake-best", badge: "CLASSIC" },
+  { id: "breakout", name: "Goldutya Breakout", file: "breakout.html", cat: "action", catLabel: "Action", image: "assets/card-breakout.webp", bestKey: "goldutya-breakout-best", badge: "HOT" },
   { id: "lumberjack", name: "Goldutya LumberJack", file: "lumberjack.html", cat: "arcade", catLabel: "Arcade", image: "assets/card-lumberjack.jpg", bestKey: "goldutya-lumberjack-best", badge: "NEW" },
   { id: "eggjump", name: "Egg Jump", file: "eggjump.html", cat: "arcade", catLabel: "Arcade", image: "assets/card-eggjump.jpg", bestKey: "goldutya-eggjump-best", badge: "NEW" },
 ];
@@ -12,12 +12,16 @@ const GAMES = [
 const grid = document.getElementById("gameGrid");
 const filterBar = document.getElementById("filterBar");
 
+function safeGet(k) {
+  try { return localStorage.getItem(k); } catch (e) { return null; }
+}
+
 function renderCards(filterCat = "all") {
   grid.innerHTML = "";
   for (const g of GAMES) {
     if (filterCat !== "all" && g.cat !== filterCat) continue;
 
-    const best = Number(localStorage.getItem(g.bestKey) || 0);
+    const best = Number(safeGet(g.bestKey) || 0);
     const diff = typeof Difficulty !== "undefined" ? Difficulty.getDiff(g.id).toUpperCase() : "MED";
     const card = document.createElement("a");
     card.className = "game-card";
@@ -44,8 +48,8 @@ function renderCards(filterCat = "all") {
   }
 }
 
-document.addEventListener("click", () => {
-  if (typeof TG !== "undefined") TG.haptic("light");
+document.addEventListener("click", (e) => {
+  if (e.target.closest(".game-card") && typeof TG !== "undefined") TG.haptic("light");
 });
 
 if (filterBar) {

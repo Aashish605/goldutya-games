@@ -5,7 +5,7 @@ test.describe('Goldutya Game Hub & Site Navigation', () => {
     await page.goto('/');
     await expect(page).toHaveTitle(/Goldutya Games/i);
     const cards = page.locator('.game-card');
-    await expect(cards).toHaveCount(6);
+    await expect(cards).toHaveCount(8);
 
     // Verify header title and filter bar
     await expect(page.locator('.hub-title')).toBeVisible();
@@ -16,12 +16,12 @@ test.describe('Goldutya Game Hub & Site Navigation', () => {
     await page.goto('/');
     await page.click('button[data-cat="arcade"]');
     const cards = page.locator('.game-card');
-    await expect(cards).toHaveCount(1);
+    await expect(cards).toHaveCount(3);
     await expect(cards.first()).toHaveAttribute('href', 'fly.html');
 
     // Click ALL back
     await page.click('button[data-cat="all"]');
-    await expect(cards).toHaveCount(6);
+    await expect(cards).toHaveCount(8);
   });
 
   test('navigates from hub to snake game and back', async ({ page }) => {

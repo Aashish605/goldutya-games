@@ -27,17 +27,21 @@ let DUCK_H = 47;
 let BASE_SPEED = 2.5;
 let BASE_SPAWN = 55;
 let IS_MOBILE = false;
+let LOW_END = false;
+let MAX_PARTICLES = 160;
+const REDUCED = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
 function fitCanvas() {
   const rect = canvas.getBoundingClientRect();
   const cssW = Math.max(1, rect.width);
   const cssH = Math.max(1, rect.height);
-  DPR = window.devicePixelRatio || 1;
+  LOW_END = ((navigator.deviceMemory && navigator.deviceMemory <= 4) || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4));
+  DPR = Math.min(LOW_END ? 1.5 : 2, window.devicePixelRatio || 1);
   canvas.width = Math.round(cssW * DPR);
   canvas.height = Math.round(cssH * DPR);
   W = cssW;
   H = cssH;
-  IS_MOBILE = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform)) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
+  IS_MOBILE = (typeof TG !== "undefined" && TG.platform && ["android","ios"].includes(TG.platform())) || ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0 || W < 600;
   COIN_R = Math.max(14, Math.min(24, Math.min(W, H) * 0.032));
   BOMB_R = Math.max(16, Math.min(26, Math.min(W, H) * 0.035));
   SHIELD_R = Math.max(13, Math.min(22, Math.min(W, H) * 0.028));
@@ -52,12 +56,154 @@ function fitCanvas() {
     BASE_SPEED = Math.max(1.7, Math.min(4.2, H * 0.003 * diffSpeedMult));
   }
   BASE_SPAWN = Math.max(25, Math.min(70, Math.round(W * 0.14 / (diff === "hard" ? 1.2 : diff === "easy" ? 0.85 : 1))));
+  MAX_PARTICLES = (LOW_END || REDUCED) ? 100 : 160;
+  buildCaches();
 }
 
 if (typeof ResizeObserver !== "undefined") {
   new ResizeObserver(fitCanvas).observe(canvas);
 } else {
   window.addEventListener("resize", fitCanvas);
+}
+
+/* ---------- cached offscreen tiles & sprites (rebuilt on resize) ---------- */
+let skyDayCv = null, skyNightCv = null, sunCv = null, vignetteCv = null;
+let timerGradGold = null, timerGradRed = null;
+let coinSprite = null, bombSprite = null, shieldSprite = null;
+
+function makeSkyTile(top, bot) {
+  var c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(W));
+  c.height = Math.max(1, Math.round(H));
+  var g = c.getContext("2d");
+  var grad = g.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "rgb(" + top[0] + "," + top[1] + "," + top[2] + ")");
+  grad.addColorStop(0.55, "rgb(" + Math.round(top[0] * 0.85) + "," + Math.round(top[1] * 0.85) + "," + Math.round(top[2] * 0.9) + ")");
+  grad.addColorStop(1, "rgb(" + bot[0] + "," + bot[1] + "," + bot[2] + ")");
+  g.fillStyle = grad;
+  g.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
+function buildSprites() {
+  var ss = Math.max(1, DPR);
+
+  coinSprite = document.createElement("canvas");
+  coinSprite.w = COIN_R * 2 + 8;
+  coinSprite.h = COIN_R * 2 + 8;
+  coinSprite.width = Math.ceil(coinSprite.w * ss);
+  coinSprite.height = Math.ceil(coinSprite.h * ss);
+  var g = coinSprite.getContext("2d");
+  g.scale(ss, ss);
+  g.translate(coinSprite.w / 2, coinSprite.h / 2);
+  g.fillStyle = GOLD;
+  g.beginPath();
+  g.ellipse(0, 0, COIN_R, COIN_R, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = GOLD2;
+  g.beginPath();
+  g.ellipse(-COIN_R * 0.22, -COIN_R * 0.22, COIN_R * 0.4, COIN_R * 0.4, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "rgba(255,255,255,0.6)";
+  g.beginPath();
+  g.moveTo(COIN_R * 0.3, -COIN_R * 0.4);
+  g.lineTo(COIN_R * 0.55, -COIN_R * 0.15);
+  g.lineTo(COIN_R * 0.2, -COIN_R * 0.1);
+  g.closePath();
+  g.fill();
+
+  bombSprite = document.createElement("canvas");
+  bombSprite.w = (BOMB_R + 14) * 2;
+  bombSprite.h = (BOMB_R + 14) * 2;
+  bombSprite.width = Math.ceil(bombSprite.w * ss);
+  bombSprite.height = Math.ceil(bombSprite.h * ss);
+  g = bombSprite.getContext("2d");
+  g.scale(ss, ss);
+  g.translate(bombSprite.w / 2, bombSprite.h / 2);
+  g.fillStyle = RED;
+  g.beginPath();
+  g.arc(0, 0, BOMB_R, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#8B0000";
+  g.beginPath();
+  g.arc(0, 0, BOMB_R * 0.55, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "rgba(255,255,255,0.15)";
+  g.beginPath();
+  g.arc(-BOMB_R * 0.2, -BOMB_R * 0.2, BOMB_R * 0.25, 0, Math.PI * 2);
+  g.fill();
+  g.strokeStyle = "#8B0000";
+  g.lineWidth = 2.5;
+  g.beginPath();
+  g.moveTo(0, -BOMB_R);
+  g.lineTo(3, -BOMB_R - 8);
+  g.stroke();
+  g.fillStyle = GOLD;
+  g.beginPath();
+  g.arc(3, -BOMB_R - 10, 3, 0, Math.PI * 2);
+  g.fill();
+
+  shieldSprite = document.createElement("canvas");
+  shieldSprite.w = SHIELD_R * 1.3 * 2 + 20;
+  shieldSprite.h = SHIELD_R * 1.3 * 2 + 20;
+  shieldSprite.width = Math.ceil(shieldSprite.w * ss);
+  shieldSprite.height = Math.ceil(shieldSprite.h * ss);
+  g = shieldSprite.getContext("2d");
+  g.scale(ss, ss);
+  g.translate(shieldSprite.w / 2, shieldSprite.h / 2);
+  g.shadowColor = CYAN;
+  g.shadowBlur = 16;
+  g.fillStyle = CYAN;
+  g.beginPath();
+  for (var i = 0; i < 5; i++) {
+    var a1 = (i * 2 * Math.PI / 5) - Math.PI / 2;
+    var a2 = ((i + 0.5) * 2 * Math.PI / 5) - Math.PI / 2;
+    var outerR = SHIELD_R * 1.3;
+    var innerR = SHIELD_R * 0.55;
+    if (i === 0) g.moveTo(Math.cos(a1) * outerR, Math.sin(a1) * outerR);
+    else g.lineTo(Math.cos(a1) * outerR, Math.sin(a1) * outerR);
+    g.lineTo(Math.cos(a2) * innerR, Math.sin(a2) * innerR);
+  }
+  g.closePath();
+  g.fill();
+}
+
+function buildCaches() {
+  skyDayCv = makeSkyTile([26, 58, 102], [18, 48, 72]);
+  skyNightCv = makeSkyTile([8, 15, 30], [4, 8, 18]);
+
+  var sunR = Math.max(80, W * 0.35);
+  sunCv = document.createElement("canvas");
+  sunCv.width = sunR * 2;
+  sunCv.height = sunR * 2;
+  var sg = sunCv.getContext("2d");
+  var sunGrad = sg.createRadialGradient(sunR, sunR, 8, sunR, sunR, sunR);
+  sunGrad.addColorStop(0, "rgba(245,197,24,0.22)");
+  sunGrad.addColorStop(1, "rgba(245,197,24,0)");
+  sg.fillStyle = sunGrad;
+  sg.fillRect(0, 0, sunCv.width, sunCv.height);
+
+  vignetteCv = document.createElement("canvas");
+  vignetteCv.width = Math.max(1, Math.round(W));
+  vignetteCv.height = Math.max(1, Math.round(H));
+  var vg = vignetteCv.getContext("2d");
+  var vGrad = vg.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.72);
+  vGrad.addColorStop(0, "rgba(212,43,43,0)");
+  vGrad.addColorStop(1, "rgba(212,43,43,0.24)");
+  vg.fillStyle = vGrad;
+  vg.fillRect(0, 0, vignetteCv.width, vignetteCv.height);
+
+  var barW = Math.min(W * 0.7, 280);
+  var barX = (W - barW) / 2;
+  var barY = Math.max(56, H * 0.1);
+  timerGradGold = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+  timerGradGold.addColorStop(0, GOLD);
+  timerGradGold.addColorStop(1, GOLD2);
+  timerGradRed = ctx.createLinearGradient(barX, barY, barX + barW, barY);
+  timerGradRed.addColorStop(0, RED);
+  timerGradRed.addColorStop(1, "#FF6B6B");
+
+  buildSprites();
 }
 
 /* ---------- duck skin ---------- */
@@ -68,7 +214,11 @@ const SKINS = [
   { name: "Rainbow", min: 50, filter: "hue-rotate(180deg) saturate(1.6)" },
   { name: "Ghost", min: 100, filter: "opacity(0.55) brightness(1.4)" },
 ];
-let unlockedSkins = JSON.parse(localStorage.getItem("goldutya-clicker-skins") || "[0]");
+let unlockedSkins = [0];
+try {
+  const storedSkins = JSON.parse(localStorage.getItem("goldutya-clicker-skins") || "[0]");
+  if (Array.isArray(storedSkins) && storedSkins.length) unlockedSkins = storedSkins;
+} catch (e) { unlockedSkins = [0]; }
 let activeSkin = unlockedSkins[unlockedSkins.length - 1] || 0;
 
 function unlockCheck(total) {
@@ -80,7 +230,7 @@ function unlockCheck(total) {
     }
   }
   if (changed) {
-    localStorage.setItem("goldutya-clicker-skins", JSON.stringify(unlockedSkins));
+    try { localStorage.setItem("goldutya-clicker-skins", JSON.stringify(unlockedSkins)); } catch (e) {}
     activeSkin = unlockedSkins[unlockedSkins.length - 1];
     updateSkinUI();
   }
@@ -131,12 +281,13 @@ let shakeX = 0, shakeY = 0, shakeDur = 0, deathFlash = 0;
 let scoreScale = 1, combo = 0, maxCombo = 0;
 let shieldTimer = 0, itemsCollected = 0;
 let bombTimer = 0, shieldTimerSpawn = 0;
-let timeLeft = 60, lastTimeTick = 0;
+let timeLeft = 60, timeAcc = 0, spawnAcc = 0, trailAcc = 0;
 let speedMult = 1;
 let nightPhase = 0, nightDir = 0, nightTimer = 0;
 let muteOn = false;
 let duckBob = 0, duckVy = 0;
-let hintShown = localStorage.getItem("goldutya-clicker-hinted") === "1";
+let hintShown = false;
+try { hintShown = localStorage.getItem("goldutya-clicker-hinted") === "1"; } catch (e) {}
 let hintTimer = 0;
 let deathCause = "timeout";
 let bombWarns = [];
@@ -145,9 +296,11 @@ const MILESTONES = [100, 250, 500, 1000, 2500, 5000];
 let lastMilestone = 0;
 const isTouch = ("ontouchstart" in window) || (navigator.maxTouchPoints || 0) > 0;
 
-best = Number(localStorage.getItem("goldutya-clicker-best") || 0);
+best = 0;
+try { best = Number(localStorage.getItem("goldutya-clicker-best") || 0) || 0; } catch (e) { best = 0; }
 if (bestEl) bestEl.textContent = best;
-muteOn = localStorage.getItem("goldutya-clicker-mute") === "1";
+muteOn = false;
+try { muteOn = localStorage.getItem("goldutya-clicker-mute") === "1"; } catch (e) {}
 
 /* ---------- audio ---------- */
 let audioCtx = null;
@@ -191,7 +344,7 @@ function shareScore() {
 
 function toggleMute() {
   muteOn = !muteOn;
-  localStorage.setItem("goldutya-clicker-mute", muteOn ? "1" : "0");
+  try { localStorage.setItem("goldutya-clicker-mute", muteOn ? "1" : "0"); } catch (e) {}
   if (muteBtn) muteBtn.innerHTML = muteOn ? '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-off"/></svg>' : '<svg class="icon" viewBox="0 0 24 24"><use href="assets/icons.svg#volume-on"/></svg>';
 }
 
@@ -199,11 +352,11 @@ function toggleMute() {
 function addPopup(x, y, text, color, scale) {
   popups.push({ x: x, y: y, text: text, color: color, life: 36, maxLife: 36, vy: -1.8, scale: scale || 1 });
 }
-function updatePopups() {
+function updatePopups(f) {
   for (let i = popups.length - 1; i >= 0; i--) {
     const p = popups[i];
-    p.y += p.vy;
-    p.life--;
+    p.y += p.vy * f;
+    p.life -= f;
     if (p.life <= 0) popups.splice(i, 1);
   }
 }
@@ -257,7 +410,7 @@ function reset() {
   bombWarns = [];
   shieldTimerSpawn = diff === "hard" ? 999999 : (10 * 60 + Math.random() * 3 * 60);
   timeLeft = 60;
-  lastTimeTick = 0;
+  timeAcc = 0; spawnAcc = 0; trailAcc = 0;
   speedMult = 1;
   nightPhase = 0; nightDir = 0; nightTimer = 0;
   duckBob = 0;
@@ -320,15 +473,16 @@ function spawnShield() {
 /* ---------- particles ---------- */
 function burst(x, y, color, n) {
   for (let i = 0; i < n; i++) {
+    if (particles.length >= MAX_PARTICLES) break;
     const a = Math.random() * Math.PI * 2;
     const s = 1 + Math.random() * 4.5;
     particles.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 1.5, life: 28 + Math.random() * 18, color: color, r: 2 + Math.random() * 3 });
   }
 }
-function updateParticles() {
+function updateParticles(f) {
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.x += p.vx; p.y += p.vy; p.vy += 0.14; p.life--;
+    p.x += p.vx * f; p.y += p.vy * f; p.vy += 0.14 * f; p.life -= f;
     if (p.life <= 0) particles.splice(i, 1);
   }
 }
@@ -345,54 +499,18 @@ function drawParticles() {
 
 /* ---------- draw items ---------- */
 function drawCoin(c) {
+  if (!coinSprite) return;
+  const scaleX = Math.abs(Math.cos(c.spin));
   ctx.save();
   ctx.translate(c.x, c.y);
-  c.spin += 0.08;
-  const scaleX = Math.abs(Math.cos(c.spin));
-  ctx.fillStyle = GOLD;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, c.r * scaleX, c.r, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = GOLD2;
-  ctx.beginPath();
-  ctx.ellipse(-c.r * 0.22 * scaleX, -c.r * 0.22, c.r * 0.4 * scaleX, c.r * 0.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.beginPath();
-  ctx.moveTo(c.r * 0.3 * scaleX, -c.r * 0.4);
-  ctx.lineTo(c.r * 0.55 * scaleX, -c.r * 0.15);
-  ctx.lineTo(c.r * 0.2 * scaleX, -c.r * 0.1);
-  ctx.closePath();
-  ctx.fill();
+  ctx.scale(scaleX, 1);
+  ctx.drawImage(coinSprite, -coinSprite.w / 2, -coinSprite.h / 2, coinSprite.w, coinSprite.h);
   ctx.restore();
 }
 
 function drawBomb(b) {
-  ctx.save();
-  ctx.translate(b.x, b.y);
-  ctx.fillStyle = RED;
-  ctx.beginPath();
-  ctx.arc(0, 0, b.r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "#8B0000";
-  ctx.beginPath();
-  ctx.arc(0, 0, b.r * 0.55, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.15)";
-  ctx.beginPath();
-  ctx.arc(-b.r * 0.2, -b.r * 0.2, b.r * 0.25, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#8B0000";
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(0, -b.r);
-  ctx.lineTo(3, -b.r - 8);
-  ctx.stroke();
-  ctx.fillStyle = GOLD;
-  ctx.beginPath();
-  ctx.arc(3, -b.r - 10, 3, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  if (!bombSprite) return;
+  ctx.drawImage(bombSprite, b.x - bombSprite.w / 2, b.y - bombSprite.h / 2, bombSprite.w, bombSprite.h);
 }
 
 function drawBombWarns() {
@@ -418,44 +536,24 @@ function drawBombWarns() {
 }
 
 function drawUrgency() {
-  if (state !== states.PLAY || timeLeft > 10) return;
+  if (state !== states.PLAY || timeLeft > 10 || !vignetteCv) return;
   var pulse = 0.14 + Math.sin(frame * 0.3) * 0.1;
-  var vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.72);
-  vg.addColorStop(0, "rgba(212,43,43,0)");
-  vg.addColorStop(1, "rgba(212,43,43," + pulse + ")");
-  ctx.fillStyle = vg;
-  ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = pulse / 0.24;
+  ctx.drawImage(vignetteCv, 0, 0, W, H);
+  ctx.globalAlpha = 1;
 }
 
 function drawShieldStar(s) {
-  ctx.save();
-  ctx.translate(s.x, s.y);
-  s.glow += 0.12;
+  if (!shieldSprite) return;
   const glowAlpha = 0.4 + Math.sin(s.glow) * 0.3;
-  ctx.shadowColor = CYAN;
-  ctx.shadowBlur = 16;
-  ctx.fillStyle = CYAN;
   ctx.globalAlpha = glowAlpha;
-  ctx.beginPath();
-  for (let i = 0; i < 5; i++) {
-    const a1 = (i * 2 * Math.PI / 5) - Math.PI / 2;
-    const a2 = ((i + 0.5) * 2 * Math.PI / 5) - Math.PI / 2;
-    const outerR = s.r * 1.3;
-    const innerR = s.r * 0.55;
-    if (i === 0) ctx.moveTo(Math.cos(a1) * outerR, Math.sin(a1) * outerR);
-    else ctx.lineTo(Math.cos(a1) * outerR, Math.sin(a1) * outerR);
-    ctx.lineTo(Math.cos(a2) * innerR, Math.sin(a2) * innerR);
-  }
-  ctx.closePath();
-  ctx.fill();
+  ctx.drawImage(shieldSprite, s.x - shieldSprite.w / 2, s.y - shieldSprite.h / 2, shieldSprite.w, shieldSprite.h);
   ctx.globalAlpha = 1;
-  ctx.shadowBlur = 0;
   ctx.fillStyle = "#fff";
   ctx.font = '700 14px "Bebas Neue", sans-serif';
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("S", 0, 1);
-  ctx.restore();
+  ctx.fillText("S", s.x, s.y + 1);
 }
 
 /* ---------- duck ---------- */
@@ -529,7 +627,6 @@ function drawDuck() {
 /* ---------- hint ---------- */
 function drawHint() {
   if (hintShown || hintTimer <= 0) return;
-  hintTimer--;
   ctx.save();
   ctx.globalAlpha = Math.min(1, hintTimer / 30);
   ctx.font = '700 ' + Math.round(H * 0.04) + 'px "Bebas Neue", sans-serif';
@@ -537,10 +634,6 @@ function drawHint() {
   ctx.fillStyle = "#fff";
   ctx.fillText("TAP COINS \u00B7 DODGE BOMBS", W / 2, H / 2);
   ctx.restore();
-  if (hintTimer <= 0 && !hintShown) {
-    hintShown = true;
-    localStorage.setItem("goldutya-clicker-hinted", "1");
-  }
 }
 
 /* ---------- tap handling ---------- */
@@ -662,23 +755,19 @@ function canvasTap(e) {
   handleTap(x, y);
 }
 
-function canvasTouch(e) {
-  e.preventDefault();
-  initAudio();
-  const rect = canvas.getBoundingClientRect();
-  for (let i = 0; i < e.changedTouches.length; i++) {
-    const touch = e.changedTouches[i];
-    const x = (touch.clientX - rect.left) * (W / rect.width);
-    const y = (touch.clientY - rect.top) * (H / rect.height);
-    handleTap(x, y);
-  }
-}
-
 document.addEventListener("keydown", handleKey);
 canvas.addEventListener("pointerdown", canvasTap);
-canvas.addEventListener("touchstart", canvasTouch, { passive: false });
 if (startBtn) startBtn.addEventListener("click", function(e) {
   e.stopPropagation();
+  initAudio();
+  if (state === states.OVER) reset();
+  state = states.PLAY;
+  overlay.classList.add("hidden");
+  invuln = 20;
+});
+overlay.addEventListener("pointerdown", function(e) {
+  if (e.target && e.target.closest && e.target.closest("button, a")) return;
+  if (state !== states.READY && state !== states.OVER) return;
   initAudio();
   if (state === states.OVER) reset();
   state = states.PLAY;
@@ -700,7 +789,7 @@ function gameOver(cause) {
   unlockCheck(score);
   if (score > best) {
     best = score;
-    localStorage.setItem("goldutya-clicker-best", String(best));
+    try { localStorage.setItem("goldutya-clicker-best", String(best)); } catch (e) {}
     if (bestEl) bestEl.textContent = best;
     burst(W / 2, H * 0.3, GOLD, 20);
     addPopup(W / 2, H * 0.32, "NEW BEST!", GOLD, 1.4);
@@ -729,22 +818,14 @@ function gameOver(cause) {
 
 /* ---------- sky / ground ---------- */
 function drawSky() {
-  var dayTop = [26, 58, 102], nightTop = [8, 15, 30];
-  var dayBot = [18, 48, 72], nightBot = [4, 8, 18];
   var n = nightPhase;
-  var g = ctx.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "rgb(" + Math.round(dayTop[0] * (1 - n) + nightTop[0] * n) + "," + Math.round(dayTop[1] * (1 - n) + nightTop[1] * n) + "," + Math.round(dayTop[2] * (1 - n) + nightTop[2] * n) + ")");
-  g.addColorStop(0.55, "rgb(" + Math.round(dayTop[0] * 0.85 * (1 - n) + nightTop[0] * 0.85 * n) + "," + Math.round(dayTop[1] * 0.85 * (1 - n) + nightTop[1] * 0.85 * n) + "," + Math.round(dayTop[2] * 0.9 * (1 - n) + nightTop[2] * 0.9 * n) + ")");
-  g.addColorStop(1, "rgb(" + Math.round(dayBot[0] * (1 - n) + nightBot[0] * n) + "," + Math.round(dayBot[1] * (1 - n) + nightBot[1] * n) + "," + Math.round(dayBot[2] * (1 - n) + nightBot[2] * n) + ")");
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
+  var skyCv = n >= 0.5 ? skyNightCv : skyDayCv;
+  if (skyCv) ctx.drawImage(skyCv, 0, 0, W, H);
 
-  if (n < 0.5) {
-    var sun = ctx.createRadialGradient(W * 0.82, H * 0.14, 8, W * 0.82, H * 0.14, Math.max(80, W * 0.35));
-    sun.addColorStop(0, "rgba(245,197,24," + (0.22 * (1 - n * 2)) + ")");
-    sun.addColorStop(1, "rgba(245,197,24,0)");
-    ctx.fillStyle = sun;
-    ctx.fillRect(0, 0, W, H);
+  if (n < 0.5 && sunCv) {
+    ctx.globalAlpha = 1 - n * 2;
+    ctx.drawImage(sunCv, W * 0.82 - sunCv.width / 2, H * 0.14 - sunCv.height / 2);
+    ctx.globalAlpha = 1;
   }
 
   if (n > 0.4) {
@@ -779,16 +860,11 @@ function drawTimer() {
   ctx.fillStyle = "rgba(11,11,13,0.5)";
   ctx.fillRect(barX, barY, barW, barH);
 
-  var timerGrad = ctx.createLinearGradient(barX, barY, barX + barW * frac, barY);
-  if (timeLeft <= 10) {
-    timerGrad.addColorStop(0, RED);
-    timerGrad.addColorStop(1, "#FF6B6B");
-  } else {
-    timerGrad.addColorStop(0, GOLD);
-    timerGrad.addColorStop(1, GOLD2);
+  var timerGrad = timeLeft <= 10 ? timerGradRed : timerGradGold;
+  if (timerGrad) {
+    ctx.fillStyle = timerGrad;
+    ctx.fillRect(barX, barY, barW * frac, barH);
   }
-  ctx.fillStyle = timerGrad;
-  ctx.fillRect(barX, barY, barW * frac, barH);
 
   ctx.strokeStyle = "rgba(245,197,24,0.3)";
   ctx.lineWidth = 1;
@@ -801,11 +877,11 @@ function drawTimer() {
 }
 
 /* ---------- update ---------- */
-function update() {
-  frame++;
+function update(f, dtMs) {
+  frame += f;
 
   if (shakeDur > 0) {
-    shakeDur--;
+    shakeDur -= f;
     shakeX = (Math.random() - 0.5) * shakeDur * 1.2;
     shakeY = (Math.random() - 0.5) * shakeDur * 1.2;
   } else {
@@ -813,20 +889,27 @@ function update() {
     shakeY = 0;
   }
 
-  if (deathFlash > 0) deathFlash--;
-  if (scoreScale > 1.01) scoreScale += (1 - scoreScale) * 0.12;
+  if (deathFlash > 0) deathFlash -= f;
+  if (scoreScale > 1.01) scoreScale += (1 - scoreScale) * Math.min(1, 0.12 * f);
+  if (hintTimer > 0) {
+    hintTimer -= f;
+    if (hintTimer <= 0 && !hintShown) {
+      hintShown = true;
+      try { localStorage.setItem("goldutya-clicker-hinted", "1"); } catch (e) {}
+    }
+  }
 
   duckBob = Math.sin(frame * 0.08) * 3 + duckVy * 1.4;
 
   for (var ci = 0; ci < clouds.length; ci++) {
     var c = clouds[ci];
     var spd = (state === states.PLAY ? 1 : 0.25) * c.speed;
-    c.x -= spd;
+    c.x -= spd * f;
     if (c.x < -100) { c.x = W + 60 + Math.random() * 120; c.y = H * (0.05 + Math.random() * 0.45); }
   }
 
   if (nightDir !== 0) {
-    nightTimer--;
+    nightTimer -= f;
     if (nightTimer <= 0) {
       if (nightDir === 1) { nightPhase = 1; nightDir = -1; nightTimer = 60; }
       else { nightPhase = 0; nightDir = 0; }
@@ -834,43 +917,48 @@ function update() {
   }
 
   if (state === states.READY) {
-    updateParticles();
-    updatePopups();
+    updateParticles(f);
+    updatePopups(f);
     return;
   }
 
   if (state === states.OVER) {
-    updateParticles();
-    updatePopups();
+    updateParticles(f);
+    updatePopups(f);
     return;
   }
 
-  /* timer */
-  if (frame - lastTimeTick >= 60) {
-    lastTimeTick = frame;
+  /* timer — real seconds regardless of fps */
+  timeAcc += dtMs;
+  if (timeAcc >= 1000) {
+    timeAcc -= 1000;
     timeLeft--;
     if (timeLeft <= 10 && timeLeft > 0) tickBlip();
     if (timeLeft <= 0) { timeLeft = 0; gameOver(); return; }
   }
 
-  if (invuln > 0) invuln--;
-  if (shieldTimer > 0) shieldTimer--;
-  if (duckVy !== 0) duckVy *= 0.9;
+  if (invuln > 0) invuln -= f;
+  if (shieldTimer > 0) shieldTimer -= f;
+  if (duckVy !== 0) duckVy *= Math.pow(0.9, f);
 
   /* spawn coins */
   var spawnInterval = Math.max(15, Math.round(BASE_SPAWN / speedMult));
   if (timeLeft <= 10) spawnInterval = Math.max(10, spawnInterval - 4);
-  if (frame % spawnInterval === 0) spawnCoin();
+  spawnAcc += f;
+  if (spawnAcc >= spawnInterval) {
+    spawnAcc -= spawnInterval;
+    spawnCoin();
+  }
 
   /* spawn bombs */
-  bombTimer--;
+  bombTimer -= f;
   if (bombTimer <= 0) {
     scheduleBomb();
     bombTimer = Math.round((180 + Math.random() * 120) / speedMult);
   }
 
   for (var wi = bombWarns.length - 1; wi >= 0; wi--) {
-    bombWarns[wi].t--;
+    bombWarns[wi].t -= f;
     if (bombWarns[wi].t <= 0) {
       spawnBombAt(bombWarns[wi].x);
       bombWarns.splice(wi, 1);
@@ -878,7 +966,7 @@ function update() {
   }
 
   /* spawn shields */
-  shieldTimerSpawn--;
+  shieldTimerSpawn -= f;
   if (shieldTimerSpawn <= 0) {
     spawnShield();
     shieldTimerSpawn = Math.round(700 + Math.random() * 200);
@@ -888,8 +976,10 @@ function update() {
   for (var i = items.length - 1; i >= 0; i--) {
     var item = items[i];
     if (!item.alive) { items.splice(i, 1); continue; }
-    item.y += item.vy;
-    item.x += item.vx || 0;
+    item.y += item.vy * f;
+    item.x += (item.vx || 0) * f;
+    if (item.type === "coin") item.spin += 0.08 * f;
+    if (item.type === "shield") item.glow += 0.12 * f;
     if (item.x < item.r) { item.x = item.r; item.vx = Math.abs(item.vx) * 0.5; }
     if (item.x > W - item.r) { item.x = W - item.r; item.vx = -Math.abs(item.vx) * 0.5; }
 
@@ -905,23 +995,34 @@ function update() {
       item.alive = false;
     }
   }
-  items = items.filter(function(item) { return item.y < H + item.r * 3; });
+
+  /* compact off-screen items in place */
+  var w = 0;
+  for (var k = 0; k < items.length; k++) {
+    var it = items[k];
+    if (it.y < H + it.r * 3) items[w++] = it;
+  }
+  items.length = w;
 
   /* duck trail particles */
-  if (frame % 4 === 0) {
-    particles.push({
-      x: W / 2 - DUCK_W * 0.3 + Math.random() * 6,
-      y: H - 80 + DUCK_H * 0.3 + Math.random() * 4,
-      vx: -0.8 - Math.random() * 1.2,
-      vy: 0.3 + Math.random() * 0.6,
-      life: 16 + Math.random() * 10,
-      color: GOLD,
-      r: 2 + Math.random() * 2,
-    });
+  trailAcc += f;
+  if (trailAcc >= 4) {
+    trailAcc -= 4;
+    if (particles.length < MAX_PARTICLES) {
+      particles.push({
+        x: W / 2 - DUCK_W * 0.3 + Math.random() * 6,
+        y: H - 80 + DUCK_H * 0.3 + Math.random() * 4,
+        vx: -0.8 - Math.random() * 1.2,
+        vy: 0.3 + Math.random() * 0.6,
+        life: 16 + Math.random() * 10,
+        color: GOLD,
+        r: 2 + Math.random() * 2,
+      });
+    }
   }
 
-  updateParticles();
-  updatePopups();
+  updateParticles(f);
+  updatePopups(f);
 }
 
 /* ---------- HUD ---------- */
@@ -966,12 +1067,6 @@ function drawHUD() {
 function render() {
   ctx.save();
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-
-  if (deathFlash > 0) {
-    ctx.fillStyle = "rgba(255,255,255," + (deathFlash / 12) + ")";
-    ctx.fillRect(0, 0, W, H);
-  }
-
   ctx.translate(shakeX, shakeY);
   ctx.clearRect(-10, -10, W + 20, H + 20);
 
@@ -994,6 +1089,11 @@ function render() {
   drawHint();
   drawHUD();
 
+  if (deathFlash > 0) {
+    ctx.fillStyle = "rgba(255,255,255," + (deathFlash / 12) + ")";
+    ctx.fillRect(-20, -20, W + 40, H + 40);
+  }
+
   ctx.restore();
 }
 
@@ -1001,11 +1101,14 @@ document.addEventListener("visibilitychange", function () {
   paused = document.hidden;
 });
 
-function loop() {
-  if (!paused) {
-    update();
-    render();
-  }
+let lastT = 0;
+function loop(t) {
+  if (!lastT) lastT = t;
+  const dtMs = Math.min(50, t - lastT);
+  lastT = t;
+  const f = Math.min(2.5, dtMs / 16.6667);
+  if (!paused) update(f, dtMs);
+  render();
   requestAnimationFrame(loop);
 }
 

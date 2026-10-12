@@ -304,16 +304,7 @@ body {
 }
 
 .fly-page .overlay {
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  touch-action: manipulation;
   gap: 10px;
-  -webkit-overflow-scrolling: touch;
-}
-
-.fly-page .difficulty-btn {
-  min-height: 44px;
-  padding: 10px 16px;
 }
 
 .fly-page .skin-swatch {

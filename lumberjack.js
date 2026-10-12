@@ -7,6 +7,7 @@
   // ------------------------------------------------------------------
   var W = 600, H = 672; // set in resize()
   var FOOTER_H = 228;
+  var DPR = Math.min(2, window.devicePixelRatio || 1);
 
   var QA = 8500, GA = 250, START_MS = 4250;
   var WARN_FRAC = 0.25, LEVEL_EVERY = 20, LEVEL_FACTOR = 0.95;
@@ -50,12 +51,15 @@
   var btnRight = document.getElementById('btnRight');
 
   var canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
+  canvas.setAttribute('role', 'img');
+  canvas.setAttribute('aria-label', 'Goldutya Lumberjack game area');
+  canvas.width = Math.round(W * DPR);
+  canvas.height = Math.round(H * DPR);
   canvas.style.width = W + 'px';
   canvas.style.height = H + 'px';
   canvasWrap.appendChild(canvas);
   var ctx = canvas.getContext('2d');
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
   // ------------------------------------------------------------------
   // State (mirrors original: Z=started, h=over/idle-result, aa=playing)
@@ -85,6 +89,9 @@
   var lastFrame = 0;
   var warnBlink = 0;
   var levelBanner = null;
+  var deathTimer = 0;
+  var frozenRemaining = 0;
+  var rafId = 0, rafStopT = 0;
 
   // ------------------------------------------------------------------
   // Audio
@@ -96,6 +103,7 @@
   }
   function blip(f, d, type, v, s) {
     var ac = audio(); if (!ac) return;
+    if (ac.state === 'suspended') ac.resume();
     try {
       var o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
       o.type = type || 'sine';
@@ -107,11 +115,19 @@
       o.start(t); o.stop(t + d);
     } catch (e) {}
   }
+  var noiseBufs = {};
   function noise(f, d, v) {
     var ac = audio(); if (!ac) return;
+    if (ac.state === 'suspended') ac.resume();
     try {
-      var l = Math.floor(ac.sampleRate * d), b = ac.createBuffer(1, l, ac.sampleRate), c = b.getChannelData(0);
-      for (var i = 0; i < l; i++) c[i] = (Math.random() * 2 - 1) * (1 - i / l);
+      var b = noiseBufs[d];
+      if (!b) {
+        var l = Math.floor(ac.sampleRate * d);
+        b = ac.createBuffer(1, l, ac.sampleRate);
+        var c = b.getChannelData(0);
+        for (var i = 0; i < l; i++) c[i] = (Math.random() * 2 - 1) * (1 - i / l);
+        noiseBufs[d] = b;
+      }
       var s = ac.createBufferSource(); s.buffer = b;
       var fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.value = f; fl.Q.value = 1.2;
       var g = ac.createGain(); g.gain.value = v || 0.18;
@@ -122,6 +138,9 @@
   function sfxBranch() { blip(320, 0.12, 'triangle', 0.2, 90); }
   function sfxDeath() { blip(260, 0.4, 'sawtooth', 0.2, 40); noise(700, 0.3, 0.15); }
   function sfxThud() { blip(90, 0.12, 'sine', 0.3, 50); }
+  function haptic(style) {
+    if (typeof TG !== 'undefined' && TG.haptic) { try { TG.haptic(style); } catch (e) {} }
+  }
 
   // ------------------------------------------------------------------
   // Assets
@@ -138,9 +157,11 @@
   // ------------------------------------------------------------------
   // Draw helpers
   // ------------------------------------------------------------------
+  // Rasterized sprite cache: each SVG drawn once at its display size (no per-frame SVG scaling)
+  var spriteCache = {};
   function drawSprite(key, x, y, w, h, flipX, alpha) {
-    var img = imgs[key], a = ASSETS[key];
-    if (!img) return;
+    var a = ASSETS[key], cached = spriteCache[key], img = cached || imgs[key];
+    if (!a || !img) return;
     w = w != null ? w : a.w;
     h = h != null ? h : a.h;
     if (alpha != null && alpha < 1) {
@@ -151,18 +172,73 @@
       ctx.save();
       ctx.translate(x + w, y);
       ctx.scale(-1, 1);
-      ctx.drawImage(img, 0, 0, a.nw, a.nh, 0, 0, w, h);
+      if (cached) ctx.drawImage(cached, 0, 0, w, h);
+      else ctx.drawImage(img, 0, 0, a.nw, a.nh, 0, 0, w, h);
       ctx.restore();
     } else {
-      ctx.drawImage(img, 0, 0, a.nw, a.nh, x, y, w, h);
+      if (cached) ctx.drawImage(cached, x, y, w, h);
+      else ctx.drawImage(img, 0, 0, a.nw, a.nh, x, y, w, h);
     }
     if (alpha != null && alpha < 1) ctx.restore();
+  }
+
+  // Pre-rendered tiling layers (rect + one extra tile per axis → seamless wrap in one drawImage)
+  var tileLayers = {};
+  var TILED = ['bg_trees', 'bg_bottom', 'bg_clouds', 'ground_bg', 'trunk'];
+  function layerRect(key) {
+    if (key === 'bg_trees') return { dx: 0, dy: 0, dw: W, dh: H };
+    if (key === 'bg_bottom') return { dx: 0, dy: L.bgBottomY, dw: W, dh: 90 };
+    if (key === 'bg_clouds') return { dx: 0, dy: 15, dw: W, dh: 128 };
+    if (key === 'ground_bg') return { dx: L.groundMidX, dy: L.groundY, dw: L.groundMidW, dh: 95 };
+    return { dx: L.trunkX, dy: 0, dw: 50, dh: L.trunkH }; // trunk
+  }
+  var cacheW = 0, cacheH = 0, cacheDPR = 0;
+  function rebuildCaches() {
+    if (!S.ready) return;
+    if (W === cacheW && H === cacheH && DPR === cacheDPR) return;
+    cacheW = W; cacheH = H; cacheDPR = DPR;
+    Object.keys(ASSETS).forEach(function (k) {
+      var img = imgs[k], a = ASSETS[k];
+      if (!img) return;
+      var c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(a.w * DPR));
+      c.height = Math.max(1, Math.round(a.h * DPR));
+      var g = c.getContext('2d');
+      g.setTransform(DPR, 0, 0, DPR, 0, 0);
+      g.drawImage(img, 0, 0, a.nw, a.nh, 0, 0, a.w, a.h);
+      spriteCache[k] = c;
+    });
+    TILED.forEach(function (k) {
+      var img = imgs[k], a = ASSETS[k], r = layerRect(k);
+      delete tileLayers[k];
+      if (!img || r.dw <= 0 || r.dh <= 0) return;
+      var lw = r.dw + a.w, lh = r.dh + a.h;
+      var c = document.createElement('canvas');
+      c.width = Math.round(lw * DPR);
+      c.height = Math.round(lh * DPR);
+      var g = c.getContext('2d');
+      g.setTransform(DPR, 0, 0, DPR, 0, 0);
+      for (var y = 0; y < lh; y += a.h) {
+        for (var x = 0; x < lw; x += a.w) {
+          g.drawImage(img, 0, 0, a.nw, a.nh, x, y, a.w, a.h);
+        }
+      }
+      tileLayers[k] = c;
+    });
   }
 
   /* TilingSprite equivalent: tile texture across rect at half scale with offsets */
   function drawTiled(key, dx, dy, dw, dh, tileX, tileY) {
     var img = imgs[key], a = ASSETS[key];
     if (!img || dw <= 0 || dh <= 0) return;
+    var lay = tileLayers[key];
+    if (lay) {
+      // cached layer: crop exact rect via source offset (pattern phase == tileX/tileY)
+      var ox = ((tileX % a.w) + a.w) % a.w;
+      var oy = ((tileY % a.h) + a.h) % a.h;
+      ctx.drawImage(lay, (a.w - ox) * DPR, (a.h - oy) * DPR, dw * DPR, dh * DPR, dx, dy, dw, dh);
+      return;
+    }
     var tw = a.w, th = a.h; // half-scale tile size
     ctx.save();
     ctx.beginPath();
@@ -224,10 +300,12 @@
     L.timelineY = 15;
     L.scoreY = 30;
     L.levelY = 56;
-    canvas.width = W;
-    canvas.height = H;
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
     canvas.style.width = W + 'px';
     canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   }
 
   function resize() {
@@ -242,6 +320,8 @@
     H = Math.max(320, availH);
     FOOTER_H = footerH;
     layout();
+    rebuildCaches();
+    if (!rafId && S.ready) render(performance.now(), 1);
   }
 
   // ------------------------------------------------------------------
@@ -290,6 +370,7 @@
       best = score;
     }
     updateBestText();
+    scoreShareEl.classList.add('shown');
 
     // single score line: Telegram name + this run's score
     var name = playerName();
@@ -340,6 +421,9 @@
 
   function startGame() {
     if (!S.ready) return;
+    clearTimeout(deathTimer);
+    loopStart();
+    frozenRemaining = 0;
     S.started = true;
     S.over = false;
     S.playing = true;
@@ -364,9 +448,11 @@
     S.over = true;
     S.playing = false;
     sfxDeath();
+    haptic('heavy');
     setSide(fromLeft);
+    loopStopAfter(1500); // result scene static after fallers settle → stop rAF (battery)
     // small delay then show result (original: setTimeout 400)
-    setTimeout(function () {
+    deathTimer = setTimeout(function () {
       updateScoreText();
       submitScore();
       setStateClasses();
@@ -423,7 +509,7 @@
       S.handAnimUntil = performance.now() + 50;
       S.deadline = Math.min(S.deadline + S.ga, performance.now() + S.qa);
       S.score++;
-      sfxChop(); sfxThud();
+      sfxChop(); sfxThud(); haptic('light');
       if (S.score % LEVEL_EVERY === 0) {
         S.level++;
         S.qa *= LEVEL_FACTOR;
@@ -453,7 +539,7 @@
     S.handAnimUntil = performance.now() + 50;
     S.deadline = Math.min(S.deadline + S.ga, performance.now() + S.qa);
     S.score++;
-    sfxChop(); sfxThud();
+    sfxChop(); sfxThud(); haptic('light');
 
     if (S.score % LEVEL_EVERY === 0) {
       S.level++;
@@ -509,7 +595,7 @@
   // ------------------------------------------------------------------
   // Render
   // ------------------------------------------------------------------
-  function render(now) {
+  function render(now, f) {
     var g = ctx;
     var isGreet = !S.started;
     var isPlaying = !S.over && S.started;
@@ -570,8 +656,8 @@
     }
 
     // Falling pieces
-    for (var f = 0; f < fallers.length; f++) {
-      var fl = fallers[f];
+    for (var fi = 0; fi < fallers.length; fi++) {
+      var fl = fallers[fi];
       g.save();
       g.globalAlpha = Math.max(0, Math.min(1, fl.alpha));
       g.translate(fl.x, fl.y);
@@ -624,10 +710,10 @@
 
     // Timeline + score + level (only when !over)
     if (!S.over) {
-      drawTimeline();
+      drawTimeline(f);
       drawText(String(S.score), W / 2, L.scoreY, 'bold 20px Charter, Georgia, serif', '#ffffff', '#886332', 1);
       if (levelBanner) {
-        levelBanner.t++;
+        levelBanner.t += f;
         levelBanner.a = levelBanner.t < levelBanner.T / 2
           ? levelBanner.t / (levelBanner.T / 2)
           : Math.max(0, 1 - (levelBanner.t - levelBanner.T / 2) / (levelBanner.T / 2));
@@ -642,7 +728,7 @@
     }
   }
 
-  function drawTimeline() {
+  function drawTimeline(f) {
     var frac = 1;
     if (S.deadline) {
       frac = (S.deadline - performance.now()) / S.qa;
@@ -661,7 +747,7 @@
     ctx.clip();
     var warn = frac < WARN_FRAC;
     if (warn) {
-      warnBlink++;
+      warnBlink += f;
       var key = (warnBlink % 14 < 7) ? 'timeline_warn' : 'timeline_bar';
       // ea.x = -88*(1-frac) shifts bar; visible portion grows from right
       var barX = ax + (-88 * (1 - frac));
@@ -676,32 +762,44 @@
   // ------------------------------------------------------------------
   // Loop
   // ------------------------------------------------------------------
+  function loopStart() {
+    clearTimeout(rafStopT);
+    if (!rafId) { lastFrame = 0; rafId = requestAnimationFrame(tick); }
+  }
+  function loopStopAfter(ms) {
+    clearTimeout(rafStopT);
+    rafStopT = setTimeout(function () {
+      if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    }, ms);
+  }
+
   function tick(now) {
     if (!lastFrame) lastFrame = now;
     var dt = now - lastFrame;
     lastFrame = now;
+    var f = Math.min(2.5, dt / 16.6667); // frame factor: 60fps-normalized delta-time
     S.frame++;
 
     updateCountdown();
 
     // clouds drift: E.tilePosition.x -= 0.25 per frame (original uses ticker not dt)
-    S.cloudX -= 0.25;
+    S.cloudX -= 0.25 * f;
     if (S.cloudX < -475) S.cloudX += 475;
 
     // fallers
     for (var i = fallers.length - 1; i >= 0; i--) {
       var fl = fallers[i];
-      fl.t++;
+      fl.t += f;
       if (fl.t >= fl.T) { fallers.splice(i, 1); continue; }
       var k = fl.t / fl.T;
-      fl.x += fl.vx / 60;
-      fl.y += (k < 0.5 ? -0.4 : 0.6) * 3;
-      fl.rot += fl.vr;
+      fl.x += fl.vx / 60 * f;
+      fl.y += (k < 0.5 ? -0.4 : 0.6) * 3 * f;
+      fl.rot += fl.vr * f;
       if (k > 0.5) fl.alpha = 1 - (k - 0.5) * 2;
     }
 
-    render(now);
-    requestAnimationFrame(tick);
+    render(now, f);
+    rafId = requestAnimationFrame(tick);
   }
 
   // ------------------------------------------------------------------
@@ -738,6 +836,13 @@
   btnRight.addEventListener('click', onRight);
   btnLeft.addEventListener('touchstart', function (e) { e.preventDefault(); onLeft(e); }, { passive: false });
   btnRight.addEventListener('touchstart', function (e) { e.preventDefault(); onRight(e); }, { passive: false });
+  function onBtnKey(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault(); e.stopPropagation();
+    if (this === btnLeft) onLeft(); else onRight();
+  }
+  btnLeft.addEventListener('keydown', onBtnKey);
+  btnRight.addEventListener('keydown', onBtnKey);
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'ArrowLeft') {
@@ -755,6 +860,17 @@
     var t = 'I scored ' + S.score + ' in LumberJack on Goldutya!';
     if (navigator.share) navigator.share({ text: t }).catch(function () {});
     else if (navigator.clipboard) navigator.clipboard.writeText(t).catch(function () {});
+  });
+
+  // freeze wall-clock countdown while tab hidden (rAF already paused by browser)
+  document.addEventListener('visibilitychange', function () {
+    if (!S.ready || !S.playing || S.over) return;
+    if (document.hidden) {
+      frozenRemaining = Math.max(0, S.deadline - performance.now());
+    } else {
+      S.deadline = performance.now() + frozenRemaining;
+      lastFrame = 0;
+    }
   });
 
   window.addEventListener('resize', resize);
@@ -775,6 +891,8 @@
     seedQueue();
     setStateClasses();
     tableWrapEl.classList.remove('opened');
-    requestAnimationFrame(tick);
+    rebuildCaches();
+    loopStart();
+    loopStopAfter(1200); // greet scene static after settle → save battery
   });
 })();
